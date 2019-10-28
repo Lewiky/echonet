@@ -10,17 +10,29 @@ class UrbanSound8KDataset(data.Dataset):
         self.mode = mode
 
     def __getitem__(self, index):
+        logmelspec = self.dataset[index]['features']['logmelspec']
+        mfcc = self.dataset[index]['features']['mfcc']
+        chroma = self.dataset[index]['features']['chroma']
+        spec_contrast = self.dataset[index]['features']['spectral_contrast']
+        tonnetz = self.dataset[index]['features']['tonnetz']
+
         if self.mode == 'LMC':
-            # Edit here to load and concatenate the neccessary features to 
-            # create the LMC feature
+            stack_1 = np.vstack((logmelspec, chroma))
+            stack_2 = np.vstack((stack_1, spec_contrast))
+            feature = np.vstack((stack_2, tonnetz))
+
             feature = torch.from_numpy(feature.astype(np.float32)).unsqueeze(0)
         elif self.mode == 'MC':
-            # Edit here to load and concatenate the neccessary features to 
-            # create the MC feature
+            stack_1 = np.vstack((mfcc, chroma))
+            stack_2 = np.vstack((stack_1, spec_contrast))
+            feature = np.vstack((stack_2, tonnetz))
+
             feature = torch.from_numpy(feature.astype(np.float32)).unsqueeze(0)
         elif self.mode == 'MLMC':
-            # Edit here to load and concatenate the neccessary features to 
-            # create the MLMC feature
+            stack_1 = np.vstack((logmelspec, mfcc))
+            stack_2 = np.vstack((stack_1, chroma))
+            stack_3 = np.vstack((stack_2, spec_contrast))
+            feature = np.vstack((stack_3, tonnetz))
             feature = torch.from_numpy(feature.astype(np.float32)).unsqueeze(0)
        
         label = self.dataset[index]['classID']
