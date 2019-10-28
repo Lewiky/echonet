@@ -2,7 +2,7 @@
 
 2019 Applied Deep Learning Coursework
 
-(The paper)[https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6479959/pdf/sensors-19-01733.pdf]
+[The paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6479959/pdf/sensors-19-01733.pdf)
 
 ## Notes
 
