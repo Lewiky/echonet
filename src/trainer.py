@@ -11,15 +11,15 @@ from torch.utils.tensorboard import SummaryWriter
 
 class Trainer:
     def __init__(
-        self,
-        model: nn.Module,
-        train_loader: DataLoader,
-        val_loader: DataLoader,
-        criterion: nn.Module,
-        optimizer: Optimizer,
-        summary_writer: SummaryWriter,
-        device: torch.device,
-    ):
+            self,
+            model: nn.Module,
+            train_loader: DataLoader,
+            val_loader: DataLoader,
+            criterion: nn.Module,
+            optimizer: Optimizer,
+            summary_writer: SummaryWriter,
+            device: torch.device,
+        ):
         self.model = model.to(device)
         self.device = device
         self.train_loader = train_loader
@@ -30,13 +30,13 @@ class Trainer:
         self.step = 0
 
     def train(
-        self,
-        epochs: int,
-        val_frequency: int,
-        print_frequency: int = 20,
-        log_frequency: int = 5,
-        start_epoch: int = 0
-    ):
+            self,
+            epochs: int,
+            val_frequency: int,
+            print_frequency: int = 20,
+            log_frequency: int = 5,
+            start_epoch: int = 0
+        ):
         self.model.train()
         for epoch in range(start_epoch, epochs):
             self.model.train()
@@ -47,26 +47,12 @@ class Trainer:
                 labels = labels.to(self.device)
                 data_load_end_time = time.time()
 
+                logits = self.model.forward(batch)
 
-                ## TASK 1: Compute the forward pass of the model, print the output shape
-                ##         and quit the program
-                # output = self.model.forward(batch)
-                # print(output.shape)
-                # import sys; sys.exit(1)
-
-                ## TASK 7: Rename `output` to `logits`, remove the output shape printing
-                ##         and get rid of the `import sys; sys.exit(1)`
-                logits = self.model.forward(batch) 
-
-                ## TASK 9: Compute the loss using self.criterion and
-                ##         store it in a variable called `loss`
-                # loss = torch.tensor(0)
                 loss = self.criterion(logits, labels)
 
-                ## TASK 10: Compute the backward pass
                 loss.backward()
 
-                ## TASK 12: Step the optimizer and then zero out the gradient buffers.
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
@@ -91,9 +77,7 @@ class Trainer:
                 # so we have to switch back to train mode afterwards
                 self.model.train()
 
-    def compute_accuracy(
-        self, labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]
-    ) -> float:
+    def compute_accuracy(self, labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]) -> float:
         """
         Args:
             labels: ``(batch_size, class_count)`` tensor or array containing example labels
