@@ -32,7 +32,7 @@ class CNN(nn.Module):
         self.initialise_layer(self.conv1)
         self.batch1 = nn.BatchNorm2d(self.conv1.out_channels)
         self.conv2 = nn.Conv2d(
-            in_channels=self.input_shape.channels,
+            in_channels=self.conv1.out_channels,
             out_channels=32,
             kernel_size=(3, 3),
             stride=(2, 2)
