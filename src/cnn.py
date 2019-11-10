@@ -16,12 +16,13 @@ class ImageShape(NamedTuple):
 
 
 class CNN(nn.Module):
-    def __init__(self, height: int, width: int, channels: int, class_count: int):
+    def __init__(self, height: int, width: int, channels: int, class_count: int, dropout: float = 0.5):
         super().__init__()
         self.input_shape = ImageShape(
             height=height, width=width, channels=channels)
         self.class_count = class_count
 
+        self.dropout= nn.Dropout(dropout)
         self.conv1 = nn.Conv2d(
             in_channels=self.input_shape.channels,
             out_channels=32,
@@ -58,12 +59,12 @@ class CNN(nn.Module):
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         x = F.relu(self.batch1(self.conv1(images)))
-        x = F.relu(self.batch2(self.conv2(x)))
+        x = F.relu(self.batch2(self.conv2(self.dropout(x))))
         x = self.pool1(x)
         x = F.relu(self.batch3(self.conv3(x)))
-        x = F.relu(self.batch4(self.conv4(x)))
+        x = F.relu(self.batch4(self.conv4(self.dropout(x))))
         x = torch.flatten(x, start_dim=1)
-        x = F.sigmoid((self.fc1(x)))
+        x = F.sigmoid((self.fc1(self.dropout(x))))
         return x
 
     @staticmethod

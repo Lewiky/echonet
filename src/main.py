@@ -28,10 +28,10 @@ parser = argparse.ArgumentParser(
 default_dataset_dir = Path.home() / ".cache" / "torch" / "datasets"
 parser.add_argument("--dataset-root", default=default_dataset_dir)
 parser.add_argument("--log-dir", default=Path("logs"), type=Path)
-parser.add_argument("--learning-rate", default=1e-2, type=float, help="Learning rate")
+parser.add_argument("--learning-rate", default=0.001, type=float, help="Learning rate")
 parser.add_argument(
     "--batch-size",
-    default=128,
+    default=32,
     type=int,
     help="Number of images within each mini-batch",
 )
@@ -66,7 +66,7 @@ parser.add_argument(
     type=int,
     help="Number of worker processes used to load data.",
 )
-parser.add_argument("--sgd-momentum", default=0, type=float)
+parser.add_argument("--sgd-momentum", default=0.9, type=float)
 parser.add_argument("--mode", default='LMC', const='LMC', nargs='?', choices=["LMC", "MC", "MLMC"], type=str)
 
 def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
@@ -112,7 +112,7 @@ def main(args):
     model = CNN(height=32, width=32, channels=3, class_count=10)
     # TODO: Move this shit
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.sgd_momentum)
+    optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.sgd_momentum, weight_decay=args.learning_rate)
 
     log_dir = get_summary_writer_log_dir(args)
     print(f"Writing logs to {log_dir}")
