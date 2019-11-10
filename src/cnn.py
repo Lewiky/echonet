@@ -58,13 +58,25 @@ class CNN(nn.Module):
         self.initialise_layer(self.fc1)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        x = F.relu(self.batch1(self.conv1(images)))
-        x = F.relu(self.batch2(self.conv2(self.dropout(x))))
+        x = self.conv1(images)
+        x = self.batch1(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+        x = self.conv2(x)
+        x = self.batch2(x)
+        x = F.relu(x)
         x = self.pool1(x)
-        x = F.relu(self.batch3(self.conv3(x)))
-        x = F.relu(self.batch4(self.conv4(self.dropout(x))))
+        x = self.conv3(x)
+        x = self.batch3(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+        x = self.conv4(x)
+        x = self.batch4(x)
+        x = F.relu(x)
         x = torch.flatten(x, start_dim=1)
-        x = F.sigmoid((self.fc1(self.dropout(x))))
+        x = self.dropout(x)
+        x = self.fc1(x)
+        x = F.sigmoid(x)
         return x
 
     @staticmethod
