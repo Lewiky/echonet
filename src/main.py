@@ -109,7 +109,7 @@ def main(args):
         pin_memory=True,
     )
 
-    model = CNN(height=32, width=32, channels=3, class_count=10)
+    model = CNN(height=85, width=41, channels=1, class_count=10)
     # TODO: Move this shit
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.sgd_momentum, weight_decay=args.learning_rate)
