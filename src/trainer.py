@@ -41,7 +41,6 @@ class Trainer:
         for epoch in range(start_epoch, epochs):
             self.model.train()
             data_load_start_time = time.time()
-            print(help(self.train_loader))
             for i, (batch, labels, filename) in enumerate(self.train_loader):
                 batch = batch.to(self.device)
                 labels = labels.to(self.device)

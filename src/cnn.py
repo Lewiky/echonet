@@ -40,14 +40,14 @@ class CNN(nn.Module):
         self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
         self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
         self.conv3 = nn.Conv2d(
-            in_channels=self.pool1.out_channels,
+            in_channels=self.conv2.out_channels,
             out_channels=64,
             kernel_size=(3, 3),
             stride=(2, 2))
         self.initialise_layer(self.conv3)
         self.batch3 = nn.BatchNorm2d(self.conv3.out_channels)
         self.conv4 = nn.Conv2d(
-            in_channels=self.pool1.out_channels,
+            in_channels=self.conv3.out_channels,
             out_channels=64,
             kernel_size=(3, 3),
             stride=(2, 2))
