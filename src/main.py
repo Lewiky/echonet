@@ -121,10 +121,9 @@ def main(args):
             flush_secs=5
     )
 
+    DEVICE = torch.device("cpu")
     if torch.cuda.is_available():
         DEVICE = torch.device("cuda")
-    else:
-        DEVICE = torch.device("cpu")
 
     trainer = Trainer(
         model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE

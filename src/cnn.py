@@ -27,7 +27,8 @@ class CNN(nn.Module):
             in_channels=self.input_shape.channels,
             out_channels=32,
             kernel_size=(3, 3),
-            stride=(2, 2)
+            stride=(2, 2),
+            padding=(43,21)
         )
         self.initialise_layer(self.conv1)
         self.batch1 = nn.BatchNorm2d(self.conv1.out_channels)
@@ -35,29 +36,33 @@ class CNN(nn.Module):
             in_channels=self.conv1.out_channels,
             out_channels=32,
             kernel_size=(3, 3),
-            stride=(2, 2)
+            stride=(2, 2),
+            padding=(43,21)
         )
         self.initialise_layer(self.conv2)
         self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(1,1))
         self.conv3 = nn.Conv2d(
             in_channels=self.conv2.out_channels,
             out_channels=64,
             kernel_size=(3, 3),
-            stride=(2, 2))
+            stride=(2, 2),
+            padding=(22,11))
         self.initialise_layer(self.conv3)
         self.batch3 = nn.BatchNorm2d(self.conv3.out_channels)
         self.conv4 = nn.Conv2d(
             in_channels=self.conv3.out_channels,
             out_channels=64,
             kernel_size=(3, 3),
-            stride=(2, 2))
+            stride=(2, 2),
+            padding=(1,1))
         self.initialise_layer(self.conv4)
         self.batch4 = nn.BatchNorm2d(self.conv3.out_channels)
         self.fc1 = nn.Linear(1024, 10)
         self.initialise_layer(self.fc1)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
+        print(images.shape)
         x = self.conv1(images)
         print(x.shape)
         x = self.batch1(x)
