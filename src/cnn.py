@@ -80,7 +80,7 @@ class CNN(nn.Module):
         x = F.relu(x)
         x = torch.flatten(x, start_dim=1)
         x = self.dropout(x)
-        x = self.fc1(x)
+        x = self.fc1(x)zf
         x = F.sigmoid(x)
         x = self.fc2(x)
         return F.softmax(x)
