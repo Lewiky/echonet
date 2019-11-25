@@ -85,6 +85,13 @@ class Trainer:
         assert len(labels) == len(preds)
         return float((labels == preds).sum()) / len(labels)
 
+    def compute_class_accuracy(labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]) -> [float]:
+        assert len(labels) == len(preds)
+
+        class_groups = [list(filter(lambda tup: tup[0].item() == i, zip(labels, preds))) for i in range(10)]
+        results = [float(len(list(filter(lambda tup: tup[0] == tup[1], group))))/len(group) for group in class_groups]
+        return result
+
     def print_metrics(self, epoch, accuracy, loss, data_load_time, step_time):
         epoch_step = self.step % len(self.train_loader)
         print(
@@ -136,6 +143,9 @@ class Trainer:
         accuracy = self.compute_accuracy(
             np.array(results["labels"]), np.array(results["preds"])
         )
+        class_accuracy = self.compute_class_accuracy(
+            np.array(results['labels']), np.array(results['preds'])
+        )
         average_loss = total_loss / len(self.val_loader)
 
         self.summary_writer.add_scalars(
@@ -149,3 +159,5 @@ class Trainer:
                 self.step
         )
         print(f"validation loss: {average_loss:.5f}, accuracy: {accuracy * 100:2.2f}")
+        for i, acc in enumerate(class_accuracy):
+            print(f"class {i} accuracy: {acc:.3f}")
