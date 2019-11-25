@@ -90,7 +90,7 @@ class Trainer:
 
         class_groups = [list(filter(lambda tup: tup[0].item() == i, zip(labels, preds))) for i in range(10)]
         results = [float(len(list(filter(lambda tup: tup[0] == tup[1], group))))/len(group) for group in class_groups]
-        return result
+        return results
 
     def print_metrics(self, epoch, accuracy, loss, data_load_time, step_time):
         epoch_step = self.step % len(self.train_loader)
