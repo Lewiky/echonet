@@ -21,14 +21,15 @@ class CNN(nn.Module):
         self.input_shape = ImageShape(
             height=height, width=width, channels=channels)
         self.class_count = class_count
+        self.stride = (1,1)
 
         self.dropout= nn.Dropout(dropout)
         self.conv1 = nn.Conv2d(
             in_channels=self.input_shape.channels,
             out_channels=32,
             kernel_size=(3, 3),
-            stride=(2, 2),
-            padding=(43,21)
+            stride=self.stride,
+            padding=(1,1)
         )
         self.initialise_layer(self.conv1)
         self.batch1 = nn.BatchNorm2d(self.conv1.out_channels)
@@ -36,8 +37,8 @@ class CNN(nn.Module):
             in_channels=self.conv1.out_channels,
             out_channels=32,
             kernel_size=(3, 3),
-            stride=(2, 2),
-            padding=(43,21)
+            stride=self.stride,
+            padding=(1,1)
         )
         self.initialise_layer(self.conv2)
         self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
@@ -46,19 +47,19 @@ class CNN(nn.Module):
             in_channels=self.conv2.out_channels,
             out_channels=64,
             kernel_size=(3, 3),
-            stride=(2, 2),
-            padding=(22,11))
+            stride=self.stride,
+            padding=(1,1))
         self.initialise_layer(self.conv3)
         self.batch3 = nn.BatchNorm2d(self.conv3.out_channels)
         self.conv4 = nn.Conv2d(
             in_channels=self.conv3.out_channels,
             out_channels=64,
             kernel_size=(3, 3),
-            stride=(2, 2),
+            stride=self.stride,
             padding=(1,1))
         self.initialise_layer(self.conv4)
         self.batch4 = nn.BatchNorm2d(self.conv3.out_channels)
-        self.fc1 = nn.Linear(15488, 1024)
+        self.fc1 = nn.Linear(57792, 1024)
         self.initialise_layer(self.fc1)
         self.fc2 = nn.Linear(1024, 10)
 
