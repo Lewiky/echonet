@@ -85,7 +85,7 @@ class Trainer:
         assert len(labels) == len(preds)
         return float((labels == preds).sum()) / len(labels)
 
-    def compute_class_accuracy(labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]) -> [float]:
+    def compute_class_accuracy(self, labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]) -> [float]:
         assert len(labels) == len(preds)
 
         class_groups = [list(filter(lambda tup: tup[0].item() == i, zip(labels, preds))) for i in range(10)]
