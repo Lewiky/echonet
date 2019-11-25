@@ -133,7 +133,6 @@ class Trainer:
             for batch, labels, fname in self.val_loader:
                 batch = batch.to(self.device)
                 labels = labels.to(self.device)
-                fname  = fname.to(self.device)
                 logits = self.model(batch)
                 loss = self.criterion(logits, labels)
                 total_loss += loss.item()
