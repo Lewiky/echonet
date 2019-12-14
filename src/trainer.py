@@ -125,20 +125,30 @@ class Trainer:
 
     def validate(self):
         results = {"preds": [], "labels": []}
+        segment_results = {'logits': [], "labels": [], "fname": []}
         total_loss = 0
         self.model.eval()
 
         # No need to track gradients for validation, we're not optimizing.
         with torch.no_grad():
-            for batch, labels, fname in self.val_loader:
+            for batch, labels, fnames in self.val_loader:
                 batch = batch.to(self.device)
                 labels = labels.to(self.device)
                 logits = self.model(batch)
                 loss = self.criterion(logits, labels)
                 total_loss += loss.item()
+                segment_results['logits'].extend(logits)
+                segment_results['labels'].extend(labels)
+                segment_results['fname'].extend(fname)
+
+            results = zip(segment_results['logits'], segment_results['labels'], segment_results['fname'])
+            for fname in set(segment_results['fname']):
+                file_results = [(result[0], result[1]) for result in results if result[2] == fname]
+                avg_logit = np.mean(result[0] for result in file_results)
                 preds = logits.argmax(dim=-1).cpu().numpy()
                 results["preds"].extend(list(preds))
                 results["labels"].extend(list(labels.cpu().numpy()))
+                results["filename"].extend(fnames)
 
         accuracy = self.compute_accuracy(
             np.array(results["labels"]), np.array(results["preds"])
