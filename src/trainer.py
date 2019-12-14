@@ -145,6 +145,9 @@ class Trainer:
                 logits = self.model(batch)
                 loss = self.criterion(logits, labels)
                 total_loss += loss.item()
+                #preds = logits.argmax(dim=-1).cpu().numpy()
+                #results["preds"].extend(list(preds))
+                #results["labels"].extend(list(labels.cpu().numpy()))
                 segment_results['logits'].extend(logits)
                 segment_results['labels'].extend(labels)
                 segment_results['fname'].extend(fnames)
@@ -162,7 +165,7 @@ class Trainer:
             np.array(results["labels"]), np.array(results["preds"])
         )
         class_accuracy = self.compute_class_accuracy(
-            np.array(results['labels']), np.array(results['preds'])
+            np.array(results["labels"]), np.array(results["preds"])
         )
         average_loss = total_loss / len(self.val_loader)
 
@@ -178,4 +181,5 @@ class Trainer:
         )
         print(f"validation loss: {average_loss:.5f}, accuracy: {accuracy * 100:2.2f}")
         for i, acc in enumerate(class_accuracy):
-            print(f"class {i} accuracy: {acc:.3f}")
+            print(f"class {i} accuracy: {acc * 100:22.3f}")
+

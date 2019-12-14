@@ -111,8 +111,14 @@ def main(args):
 
     model = CNN(height=85, width=41, channels=1, class_count=10)
     # TODO: Move this shit
+
+
+    # CrossEntropyLoss includes SoftMax, so no need to include in model
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.sgd_momentum, weight_decay=args.learning_rate)
+
+    # optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.sgd_momentum, weight_decay=args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.learning_rate)
+
     log_dir = get_summary_writer_log_dir(args)
     print(f"Writing logs to {log_dir}")
     summary_writer = SummaryWriter(

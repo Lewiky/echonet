@@ -24,6 +24,8 @@ class CNN(nn.Module):
         self.stride = (1,1)
 
         self.dropout= nn.Dropout(dropout)
+
+        # 1st Conv. Layer
         self.conv1 = nn.Conv2d(
             in_channels=self.input_shape.channels,
             out_channels=32,
@@ -33,6 +35,8 @@ class CNN(nn.Module):
         )
         self.initialise_layer(self.conv1)
         self.batch1 = nn.BatchNorm2d(self.conv1.out_channels)
+
+        # 2nd Conv. Layer
         self.conv2 = nn.Conv2d(
             in_channels=self.conv1.out_channels,
             out_channels=32,
@@ -42,15 +46,21 @@ class CNN(nn.Module):
         )
         self.initialise_layer(self.conv2)
         self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(1,1))
+
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
+
+        # 3rd Conv. layer
         self.conv3 = nn.Conv2d(
             in_channels=self.conv2.out_channels,
             out_channels=64,
             kernel_size=(3, 3),
             stride=self.stride,
-            padding=(1,1))
+            padding=(1,1)
+        )
         self.initialise_layer(self.conv3)
         self.batch3 = nn.BatchNorm2d(self.conv3.out_channels)
+
+        # 4th conv. layer
         self.conv4 = nn.Conv2d(
             in_channels=self.conv3.out_channels,
             out_channels=64,
@@ -59,18 +69,24 @@ class CNN(nn.Module):
             padding=(1,1))
         self.initialise_layer(self.conv4)
         self.batch4 = nn.BatchNorm2d(self.conv3.out_channels)
-        self.fc1 = nn.Linear(57792, 1024)
+
+        self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
+
+        self.fc1 = nn.Linear(15488, 1024)
         self.initialise_layer(self.fc1)
+
         self.fc2 = nn.Linear(1024, 10)
+        self.initialise_layer(self.fc2)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         x = F.relu(self.batch1(self.conv1(images)))
-        x = F.relu(self.batch2(self.conv2(self.dropout(x))))
+        x = self.dropout(F.relu(self.batch2(self.conv2(x))))
         x = F.relu(self.batch3(self.conv3(self.pool1(x))))
-        x = F.relu(self.batch4(self.conv4(self.dropout(x))))
+        x = self.dropout(F.relu(self.batch4(self.conv4(x))))
+        x = self.pool2(x)
         x = torch.flatten(x, start_dim=1)
-        x = torch.sigmoid(self.fc1(self.dropout(x)))
-        return F.softmax(self.fc2(x))
+        x = self.dropout(torch.sigmoid(self.fc1(x)))
+        return self.fc2(x)
 
     @staticmethod
     def initialise_layer(layer):
