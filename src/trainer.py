@@ -139,16 +139,16 @@ class Trainer:
                 total_loss += loss.item()
                 segment_results['logits'].extend(logits)
                 segment_results['labels'].extend(labels)
-                segment_results['fname'].extend(fname)
+                segment_results['fname'].extend(fnames)
 
-            results = zip(segment_results['logits'], segment_results['labels'], segment_results['fname'])
+            all_results = list(zip(segment_results['logits'], segment_results['labels'], segment_results['fname']))
             for fname in set(segment_results['fname']):
-                file_results = [(result[0], result[1]) for result in results if result[2] == fname]
-                avg_logit = np.mean(result[0] for result in file_results)
-                preds = logits.argmax(dim=-1).cpu().numpy()
-                results["preds"].extend(list(preds))
-                results["labels"].extend(list(labels.cpu().numpy()))
-                results["filename"].extend(fnames)
+                file_results = [(result[0], result[1]) for result in all_results if result[2] == fname]
+                avg_logits = torch.mean(torch.stack(list(result[0] for result in file_results)), dim=0)
+                preds = avg_logits.argmax(dim=-1).cpu().numpy()
+                results["preds"].append(preds)
+                # All fileresults should have same label, so we can take the first one
+                results["labels"].append(file_results[0][1])
 
         accuracy = self.compute_accuracy(
             np.array(results["labels"]), np.array(results["preds"])
