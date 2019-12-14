@@ -88,9 +88,17 @@ class Trainer:
     def compute_class_accuracy(self, labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]) -> [float]:
         assert len(labels) == len(preds)
 
-        class_groups = [list(filter(lambda tup: tup[0].item() == i, zip(labels, preds))) for i in range(10)]
-        results = [float(len(list(filter(lambda tup: tup[0] == tup[1], group))))/len(group) for group in class_groups]
-        return results
+        classes = []
+        for c in range(10):
+            total = 0
+            count = 0
+            for label, pred in zip(labels, preds):
+                if label == c:
+                    if pred == c:
+                        count += 1
+                    total += 1
+            classes.append(float(count) / float(total))
+        return classes 
 
     def print_metrics(self, epoch, accuracy, loss, data_load_time, step_time):
         epoch_step = self.step % len(self.train_loader)
