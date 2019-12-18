@@ -21,7 +21,8 @@ class CNN(nn.Module):
         self.input_shape = ImageShape(
             height=height, width=width, channels=channels)
         self.class_count = class_count
-        self.stride = (1,1)
+        self.stride = (2,2)
+        self.momentum = 0.1
 
         self.dropout= nn.Dropout(dropout)
 
@@ -31,10 +32,10 @@ class CNN(nn.Module):
             out_channels=32,
             kernel_size=(3, 3),
             stride=self.stride,
-            padding=(1,1)
+            padding=(43,21)
         )
         self.initialise_layer(self.conv1)
-        self.batch1 = nn.BatchNorm2d(self.conv1.out_channels)
+        self.batch1 = nn.BatchNorm2d(self.conv1.out_channels, momentum=self.momentum)
 
         # 2nd Conv. Layer
         self.conv2 = nn.Conv2d(
@@ -42,11 +43,10 @@ class CNN(nn.Module):
             out_channels=32,
             kernel_size=(3, 3),
             stride=self.stride,
-            padding=(1,1)
+            padding=(43,21)
         )
         self.initialise_layer(self.conv2)
-        self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
-
+        self.batch2 = nn.BatchNorm2d(self.conv2.out_channels, momentum=self.momentum)
         self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
 
         # 3rd Conv. layer
@@ -55,10 +55,10 @@ class CNN(nn.Module):
             out_channels=64,
             kernel_size=(3, 3),
             stride=self.stride,
-            padding=(1,1)
+            padding=(22,11)
         )
         self.initialise_layer(self.conv3)
-        self.batch3 = nn.BatchNorm2d(self.conv3.out_channels)
+        self.batch3 = nn.BatchNorm2d(self.conv3.out_channels, momentum=self.momentum)
 
         # 4th conv. layer
         self.conv4 = nn.Conv2d(
@@ -68,25 +68,27 @@ class CNN(nn.Module):
             stride=self.stride,
             padding=(1,1))
         self.initialise_layer(self.conv4)
-        self.batch4 = nn.BatchNorm2d(self.conv3.out_channels)
+        self.batch4 = nn.BatchNorm2d(self.conv3.out_channels, momentum=self.momentum)
 
-        self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
+        #self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
 
         self.fc1 = nn.Linear(15488, 1024)
         self.initialise_layer(self.fc1)
 
         self.fc2 = nn.Linear(1024, 10)
         self.initialise_layer(self.fc2)
+        params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        print(f"Number of params: {params}")
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        x = F.relu(self.batch1(self.conv1(images)))
-        x = self.dropout(F.relu(self.batch2(self.conv2(x))))
-        x = F.relu(self.batch3(self.conv3(self.pool1(x))))
-        x = self.dropout(F.relu(self.batch4(self.conv4(x))))
-        x = self.pool2(x)
+        x = self.batch1(F.relu(self.conv1(images)))
+        x = self.batch2(self.dropout(self.pool1(F.relu(self.conv2(x)))))
+        x = self.batch3(F.relu(self.conv3(x)))
+        x = self.batch4(self.dropout(F.relu(self.conv4(x))))
+        #x = self.pool2(x)
         x = torch.flatten(x, start_dim=1)
         x = self.dropout(torch.sigmoid(self.fc1(x)))
-        return self.fc2(x)
+        return F.softmax(self.fc2(x), dim=-1)
 
     @staticmethod
     def initialise_layer(layer):

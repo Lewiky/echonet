@@ -142,21 +142,34 @@ class Trainer:
             for batch, labels, fnames in self.val_loader:
                 batch = batch.to(self.device)
                 labels = labels.to(self.device)
+                #compute the models predictions for each segment
                 logits = self.model(batch)
                 loss = self.criterion(logits, labels)
                 total_loss += loss.item()
-                #preds = logits.argmax(dim=-1).cpu().numpy()
-                #results["preds"].extend(list(preds))
-                #results["labels"].extend(list(labels.cpu().numpy()))
+                #Build dictionary of the results of each segment
                 segment_results['logits'].extend(logits)
                 segment_results['labels'].extend(labels)
                 segment_results['fname'].extend(fnames)
 
+
+            #zip these results together so we have access to logits, label, fname for each segment
             all_results = list(zip(segment_results['logits'], segment_results['labels'], segment_results['fname']))
+            #Iterate through all unique filenames
             for fname in set(segment_results['fname']):
+                # Get all the logits and labels for that filename
                 file_results = [(result[0], result[1]) for result in all_results if result[2] == fname]
+                try:
+                    assert all(x[1] == file_results[0][1] for x in file_results)
+                    assert all(len(i[0]) == 10 for i in file_results)
+                except (AssertionError, TypeError) as e:
+                    print(f"tensor {file_results[4][0]}")
+                    print(f"length {len(file_results[4][0])}")
+                    raise
+                # Take the mean of all those logits 
                 avg_logits = torch.mean(torch.stack(list(result[0] for result in file_results)), dim=0)
-                preds = avg_logits.argmax(dim=-1).cpu().numpy()
+                #Get the argmax to get the prediction for this file
+                preds = avg_logits.argmax(dim = -1).cpu().numpy()
+                #Append to the regular lists
                 results["preds"].append(preds)
                 # All fileresults should have same label, so we can take the first one
                 results["labels"].append(file_results[0][1])
