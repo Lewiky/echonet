@@ -22,7 +22,6 @@ class CNN(nn.Module):
             height=height, width=width, channels=channels)
         self.class_count = class_count
         self.stride = (2,2)
-        self.momentum = 0.1
 
         self.dropout= nn.Dropout(dropout)
 
@@ -35,8 +34,9 @@ class CNN(nn.Module):
             padding=(43,21)
         )
         self.initialise_layer(self.conv1)
-        self.batch1 = nn.BatchNorm2d(self.conv1.out_channels, momentum=self.momentum)
-
+        self.batch1 = nn.BatchNorm2d(self.conv1.out_channels)
+        params = sum(p.numel() for p in self.conv1.parameters() if p.requires_grad)
+        print(f"Number of params layer 1: {params}")
         # 2nd Conv. Layer
         self.conv2 = nn.Conv2d(
             in_channels=self.conv1.out_channels,
@@ -46,9 +46,11 @@ class CNN(nn.Module):
             padding=(43,21)
         )
         self.initialise_layer(self.conv2)
-        self.batch2 = nn.BatchNorm2d(self.conv2.out_channels, momentum=self.momentum)
+        self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
         self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
 
+        params = sum(p.numel() for p in self.conv2.parameters() if p.requires_grad)
+        print(f"Number of params layer 2: {params}")
         # 3rd Conv. layer
         self.conv3 = nn.Conv2d(
             in_channels=self.conv2.out_channels,
@@ -58,8 +60,10 @@ class CNN(nn.Module):
             padding=(22,11)
         )
         self.initialise_layer(self.conv3)
-        self.batch3 = nn.BatchNorm2d(self.conv3.out_channels, momentum=self.momentum)
+        self.batch3 = nn.BatchNorm2d(self.conv3.out_channels)
 
+        params = sum(p.numel() for p in self.conv3.parameters() if p.requires_grad)
+        print(f"Number of params layer 3: {params}")
         # 4th conv. layer
         self.conv4 = nn.Conv2d(
             in_channels=self.conv3.out_channels,
@@ -68,13 +72,15 @@ class CNN(nn.Module):
             stride=self.stride,
             padding=(1,1))
         self.initialise_layer(self.conv4)
-        self.batch4 = nn.BatchNorm2d(self.conv3.out_channels, momentum=self.momentum)
-
+        self.batch4 = nn.BatchNorm2d(self.conv3.out_channels)
+        params = sum(p.numel() for p in self.conv4.parameters() if p.requires_grad)
+        print(f"Number of params layer 4: {params}")
         #self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
 
         self.fc1 = nn.Linear(15488, 1024)
         self.initialise_layer(self.fc1)
-
+        params = sum(p.numel() for p in self.fc1.parameters() if p.requires_grad)
+        print(f"Number of params layer 5: {params}")
         self.fc2 = nn.Linear(1024, 10)
         self.initialise_layer(self.fc2)
         params = sum(p.numel() for p in self.parameters() if p.requires_grad)
