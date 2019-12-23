@@ -141,13 +141,14 @@ class Trainer:
         returns 1 x 10 tensor
         '''
         if mode == 'mode':
-            argmaxs = torch.argmax(dim=-1)
+            argmaxs = logits.argmax(dim=-1)
             return argmaxs.mode().values.item()
         if mode == 'mean':
-            raise NotImplementedError
+            means = logits.mean(dim=0)
+            return means.argmax(dim=0).item()
         else:
             raise NotImplementedError
-
+        print("Error, returning 0")
         return logits[0]
 
     def validate(self):
