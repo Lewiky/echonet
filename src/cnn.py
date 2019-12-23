@@ -86,7 +86,7 @@ class CNN(nn.Module):
         x = self.pool2(x)
         x = torch.flatten(x, start_dim=1)
         x = self.dropout(torch.sigmoid(self.fc1(x)))
-        return self.fc2(x)
+        return F.softmax(self.fc2(x), dim=-1)
 
     @staticmethod
     def initialise_layer(layer):
