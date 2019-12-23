@@ -135,13 +135,14 @@ class Trainer:
                 "time/data", step_time, self.step
         )
 
-    def compute_average_logits(self, logits, mode='mode'):
+    def compute_average_prediction(self, logits, mode='mode'):
         '''
         logits: batch_size x 10 tensor 
         returns 1 x 10 tensor
         '''
         if mode == 'mode':
-            
+            argmaxs = torch.argmax(dim=-1)
+            return argmaxs.mode().values.item()
         if mode == 'mean':
             raise NotImplementedError
         else:
@@ -178,8 +179,7 @@ class Trainer:
                 assert(all(file_labels[0] == label for label in file_labels))
                 label = file_labels[0]
                 # Average the logits from this file
-                average_logits = self.compute_average_logits(file_logits)
-                prediction = average_logits.argmax(dim=-1).cpu().item()
+                prediction = self.compute_average_prediction(file_logits)
                 results['preds'].append(prediction)
                 results['labels'].append(label)
 
