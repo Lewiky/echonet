@@ -174,8 +174,7 @@ class Trainer:
             for fname in set(segment_results['fname']):
                 # Get logits and labels from this file
                 indices = get_indices(segment_results['fname'], fname)
-                print(f'Indicies: {indices}')
-                file_logits = [segment_results['logits'][i] for i in indices]
+                file_logits = torch.Tensor([list(segment_results['logits'][i]) for i in indices])
                 file_labels = [segment_results['labels'][i] for i in indices]
                 # All labels should be the same in a file
                 assert(all(file_labels[0] == label for label in file_labels))
