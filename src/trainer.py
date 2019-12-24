@@ -162,6 +162,7 @@ class Trainer:
             for batch, labels, fnames in self.val_loader:
                 batch = batch.to(self.device)
                 labels = labels.to(self.device)
+                #compute the models predictions for each segment
                 logits = self.model(batch)
                 loss = self.criterion(logits, labels)
                 total_loss += loss.item()
