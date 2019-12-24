@@ -143,7 +143,7 @@ class Trainer:
         if mode == 'mode':
             argmaxs = logits.argmax(dim=-1)
             return argmaxs.mode().values.item()
-        if mode == 'mean':
+        elif mode == 'mean':
             means = logits.mean(dim=0)
             return means.argmax(dim=0).item()
         else:
