@@ -37,6 +37,7 @@ class CNN(nn.Module):
         self.batch1 = nn.BatchNorm2d(self.conv1.out_channels)
         params = sum(p.numel() for p in self.conv1.parameters() if p.requires_grad)
         print(f"Number of params layer 1: {params}")
+
         # 2nd Conv. Layer
         self.conv2 = nn.Conv2d(
             in_channels=self.conv1.out_channels,
@@ -51,6 +52,7 @@ class CNN(nn.Module):
 
         params = sum(p.numel() for p in self.conv2.parameters() if p.requires_grad)
         print(f"Number of params layer 2: {params}")
+
         # 3rd Conv. layer
         self.conv3 = nn.Conv2d(
             in_channels=self.conv2.out_channels,
@@ -64,6 +66,7 @@ class CNN(nn.Module):
 
         params = sum(p.numel() for p in self.conv3.parameters() if p.requires_grad)
         print(f"Number of params layer 3: {params}")
+
         # 4th conv. layer
         self.conv4 = nn.Conv2d(
             in_channels=self.conv3.out_channels,
@@ -88,32 +91,32 @@ class CNN(nn.Module):
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         x = self.conv1(images)
-        x = F.relu(x)
         x = self.batch1(x)
+        x = F.relu(x)
 
+        x = self.dropout(x)
         x = self.conv2(x)
+        x = self.batch2(x)
         x = F.relu(x)
         x = self.pool1(x)
-        x = self.dropout(x)
-        x = self.batch2(x)
 
         x = self.conv3(x)
-        x = F.relu(x)
         x = self.batch3(x)
-
-        x = self.conv4(x)
         x = F.relu(x)
+
         x = self.dropout(x)
+        x = self.conv4(x)
         x = self.batch4(x)
+        x = F.relu(x)
 
         x = torch.flatten(x, start_dim=1)
 
-        x = self.fc1(x)
-        x = torch.sigmoid(x)
         x = self.dropout(x)
+        x = self.fc1(x)
+        x = F.sigmoid(x)
 
         x = self.fc2(x)
-        x = F.softmax(x, dim=-1)
+        # x = F.softmax(x, dim=-1)
 
         return x 
 
