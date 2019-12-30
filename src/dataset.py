@@ -17,22 +17,13 @@ class UrbanSound8KDataset(data.Dataset):
         tonnetz = self.dataset[index]['features']['tonnetz']
 
         if self.mode == 'LMC':
-            stack_1 = np.vstack((logmelspec, chroma))
-            stack_2 = np.vstack((stack_1, spec_contrast))
-            feature = np.vstack((stack_2, tonnetz))
-
+            feature = np.concatenate((logmelspec, chroma, spec_contrast, tonnetz), axis=0)
             feature = torch.from_numpy(feature.astype(np.float32)).unsqueeze(0)
         elif self.mode == 'MC':
-            stack_1 = np.vstack((mfcc, chroma))
-            stack_2 = np.vstack((stack_1, spec_contrast))
-            feature = np.vstack((stack_2, tonnetz))
-
+            feature = np.concatenate((mfcc, chroma, spec_contrast, tonnetz), axis=0)
             feature = torch.from_numpy(feature.astype(np.float32)).unsqueeze(0)
         elif self.mode == 'MLMC':
-            stack_1 = np.vstack((logmelspec, mfcc))
-            stack_2 = np.vstack((stack_1, chroma))
-            stack_3 = np.vstack((stack_2, spec_contrast))
-            feature = np.vstack((stack_3, tonnetz))
+            feature = np.concatenate((mfcc, logmelspec, chroma, spec_contrast, tonnetz), axis=0)
             feature = torch.from_numpy(feature.astype(np.float32)).unsqueeze(0)
        
         label = self.dataset[index]['classID']
