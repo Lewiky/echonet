@@ -21,7 +21,7 @@ class CNN(nn.Module):
         self.input_shape = ImageShape(
             height=height, width=width, channels=channels)
         self.class_count = class_count
-        self.stride = (2,2)
+        self.stride = (1,1)
 
         self.dropout= nn.Dropout(dropout)
 
@@ -31,7 +31,7 @@ class CNN(nn.Module):
             out_channels=32,
             kernel_size=(3, 3),
             stride=self.stride,
-            padding=(43,21),
+            padding=(1, 1),
             bias=False
         )
         self.initialise_layer(self.conv1)
@@ -45,12 +45,12 @@ class CNN(nn.Module):
             out_channels=32,
             kernel_size=(3, 3),
             stride=self.stride,
-            padding=(43,21),
+            padding=(1, 1),
             bias=False
         )
         self.initialise_layer(self.conv2)
         self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(1, 1))
 
         params = sum(p.numel() for p in self.conv2.parameters() if p.requires_grad)
         print(f"Number of params layer 2: {params}")
@@ -61,7 +61,7 @@ class CNN(nn.Module):
             out_channels=64,
             kernel_size=(3, 3),
             stride=self.stride,
-            padding=(22,11),
+            padding=(1, 1),
             bias=False
         )
         self.initialise_layer(self.conv3)
@@ -75,8 +75,8 @@ class CNN(nn.Module):
             in_channels=self.conv3.out_channels,
             out_channels=64,
             kernel_size=(3, 3),
-            stride=self.stride,
-            padding=(1,1), 
+            stride=(2, 2),
+            padding=(1, 1),
             bias=False
         )
         self.initialise_layer(self.conv4)
@@ -95,8 +95,6 @@ class CNN(nn.Module):
         self.initialise_layer(self.fc2)
         params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print(f"Number of params: {params}")
-
-        self.softy = nn.Softmax(dim=1)
 
     # Batch norm should come after relu: https://www.reddit.com/r/MachineLearning/comments/67gonq/d_batch_normalization_before_or_after_relu/
     # Pooling can come before or after activation function: https://stackoverflow.com/questions/35543428/activation-function-after-pooling-layer-or-convolutional-layer
@@ -128,7 +126,7 @@ class CNN(nn.Module):
         x = self.dropout(x)
 
         x = self.fc2(x)
-        x = self.softy(x)
+        x = F.softmax(x, dim=-1)
 
         return x 
 
