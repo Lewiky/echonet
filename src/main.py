@@ -110,8 +110,6 @@ def main(args):
     )
 
     model = CNN(height=85, width=41, channels=1, class_count=10)
-    # TODO: Move this shit
-
 
     # CrossEntropyLoss includes SoftMax, so no need to include in model
     criterion = nn.CrossEntropyLoss()
