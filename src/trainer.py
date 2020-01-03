@@ -9,6 +9,10 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
+def get_indices(l, x):
+    '''Get all of the indices of l with value x'''
+    return [i for i in range(len(l)) if l[i] == x]
+
 class Trainer:
     def __init__(
             self,
@@ -37,6 +41,7 @@ class Trainer:
             log_frequency: int = 5,
             start_epoch: int = 0
         ):
+        self.validate()
         self.model.train()
         for epoch in range(start_epoch, epochs):
             self.model.train()
@@ -131,6 +136,22 @@ class Trainer:
                 "time/data", step_time, self.step
         )
 
+    def compute_average_prediction(self, logits, mode='mode'):
+        '''
+        logits: batch_size x 10 tensor 
+        returns 1 x 10 tensor
+        '''
+        if mode == 'mode':
+            argmaxs = logits.argmax(dim=-1)
+            return argmaxs.mode().values.item()
+        elif mode == 'mean':
+            means = logits.mean(dim=0)
+            return means.argmax(dim=0).item()
+        else:
+            raise NotImplementedError
+        print("Error, returning 0")
+        return logits[0]
+
     def validate(self):
         results = {"preds": [], "labels": []}
         segment_results = {'logits': [], "labels": [], "fname": []}
@@ -146,40 +167,34 @@ class Trainer:
                 logits = self.model(batch)
                 loss = self.criterion(logits, labels)
                 total_loss += loss.item()
-                #Build dictionary of the results of each segment
-                segment_results['logits'].extend(logits)
-                segment_results['labels'].extend(labels)
+                # Collect all results to merge
+                segment_results['logits'].extend(list(logits))
+                segment_results['labels'].extend(list(labels))
                 segment_results['fname'].extend(fnames)
 
-
-            #zip these results together so we have access to logits, label, fname for each segment
-            all_results = list(zip(segment_results['logits'], segment_results['labels'], segment_results['fname']))
-            #Iterate through all unique filenames
+            # For each unique file
             for fname in set(segment_results['fname']):
-                # Get all the logits and labels for that filename
-                file_results = [(result[0], result[1]) for result in all_results if result[2] == fname]
-                try:
-                    assert all(x[1] == file_results[0][1] for x in file_results)
-                    assert all(len(i[0]) == 10 for i in file_results)
-                except (AssertionError, TypeError) as e:
-                    print(f"tensor {file_results[4][0]}")
-                    print(f"length {len(file_results[4][0])}")
-                    raise
-                # Take the mean of all those logits 
-                avg_logits = torch.mean(torch.stack(list(result[0] for result in file_results)), dim=0)
-                #Get the argmax to get the prediction for this file
-                preds = avg_logits.argmax(dim = -1).cpu().numpy()
-                #Append to the regular lists
-                results["preds"].append(preds)
-                # All fileresults should have same label, so we can take the first one
-                results["labels"].append(file_results[0][1])
+                # Get logits and labels from this file
+                indices = get_indices(segment_results['fname'], fname)
+                file_logits = torch.Tensor([list(segment_results['logits'][i]) for i in indices])
+                file_labels = [segment_results['labels'][i] for i in indices]
+                # All labels should be the same in a file
+                assert(all(file_labels[0] == label for label in file_labels))
+                label = file_labels[0]
+                # Average the logits from this file
+                prediction = self.compute_average_prediction(file_logits)
+                results['preds'].append(prediction)
+                results['labels'].append(label)
 
-        accuracy = self.compute_accuracy(
-            np.array(results["labels"]), np.array(results["preds"])
-        )
         class_accuracy = self.compute_class_accuracy(
             np.array(results["labels"]), np.array(results["preds"])
         )
+
+        # accuracy = self.compute_accuracy(
+        #     np.array(results["labels"]), np.array(results["preds"])
+        # )
+        accuracy = np.sum(class_accuracy) / len(class_accuracy)
+
         average_loss = total_loss / len(self.val_loader)
 
         self.summary_writer.add_scalars(
