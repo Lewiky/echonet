@@ -248,3 +248,9 @@ In addition to the above, the produced code and report are
 exemplary, and could be given as an example for an attempt to
 replicate this published work. Improvements in results are
 beyond marginal.
+
+# Forum Notes
+
+- 50 Epochs
+
+- 
