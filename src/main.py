@@ -115,7 +115,7 @@ def main(args):
     criterion = nn.CrossEntropyLoss()
 
     # optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.sgd_momentum, weight_decay=args.learning_rate)
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.004)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
 
     log_dir = get_summary_writer_log_dir(args)
     print(f"Writing logs to {log_dir}")
