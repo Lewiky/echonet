@@ -91,14 +91,11 @@ class CNN(nn.Module):
         params = sum(p.numel() for p in self.fc1.parameters() if p.requires_grad)
         print(f"Number of params layer 5: {params}")
 
-        self.fc2 = nn.Linear(1024, 10, bias=False)
+        self.fc2 = nn.Linear(1024, 10)
         self.initialise_layer(self.fc2)
         params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print(f"Number of params: {params}")
 
-    # Batch norm should come after relu: https://www.reddit.com/r/MachineLearning/comments/67gonq/d_batch_normalization_before_or_after_relu/
-    # Pooling can come before or after activation function: https://stackoverflow.com/questions/35543428/activation-function-after-pooling-layer-or-convolutional-layer
-    # dropout: https://stackoverflow.com/questions/39691902/ordering-of-batch-normalization-and-dropout 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         x = self.batch1(F.relu(self.conv1(images)))
         x = self.batch2(self.dropout(self.pool1(F.relu(self.conv2(x)))))
