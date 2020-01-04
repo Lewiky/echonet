@@ -185,12 +185,15 @@ class Trainer:
                 results['preds'].append(prediction)
                 results['labels'].append(label)
 
-        accuracy = self.compute_accuracy(
-            np.array(results["labels"]), np.array(results["preds"])
-        )
         class_accuracy = self.compute_class_accuracy(
             np.array(results["labels"]), np.array(results["preds"])
         )
+
+        # accuracy = self.compute_accuracy(
+        #     np.array(results["labels"]), np.array(results["preds"])
+        # )
+        accuracy = np.sum(class_accuracy) / len(class_accuracy)
+
         average_loss = total_loss / len(self.val_loader)
 
         self.summary_writer.add_scalars(
