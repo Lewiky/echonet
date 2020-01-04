@@ -105,7 +105,7 @@ class CNN(nn.Module):
         x = torch.flatten(x, start_dim=1)
         x = self.dropout(torch.sigmoid(self.fc1(x)))
         x = self.fc2(x)
-        # x = F.softmax(x, dim=-1)
+        x = F.softmax(x, dim=-1)
         return x
 
     @staticmethod
