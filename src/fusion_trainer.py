@@ -1,6 +1,7 @@
 import time
 import torch
 import torch.backends.cudnn
+import numpy as np
 from torch import nn, optim
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
@@ -38,8 +39,119 @@ class FusionTrainer(BaseTrainer):
             log_frequency: int = 5,
             start_epoch: int = 0
         ):
-        # TODO
-        print("training")
+        self.lmc_model.train()
+        self.mc_model.train()
+
+        for epoch in range(start_epoch, epochs):
+            self.lmc_model.train()
+            self.mc_model.train()
+            data_load_start_time = time.time()
+            for i, ((lmc_batch, mc_batch), labels, filename) in enumerate(self.train_loader):
+                lmc_batch = lmc_batch.to(self.device)
+                mc_batch = mc_batch.to(self.device)
+                labels = labels.to(self.device)
+                data_load_end_time = time.time()
+
+                lmc_logits = self.lmc_model.forward(lmc_batch)
+                mc_logits = self.mc_model.forward(mc_batch)
+
+                # Take mean of lmc and mc prediction of segment
+                logits = torch.mean(torch.stack((lmc_logits, mc_logits), dim=2), dim=2)
+
+                loss = self.criterion(logits, labels)
+                loss.backward()
+
+                self.lmc_optimizer.step()
+                self.lmc_optimizer.zero_grad()
+
+                self.mc_optimizer.step()
+                self.mc_optimizer.zero_grad()
+
+                with torch.no_grad():
+                    preds = logits.argmax(-1)
+                    accuracy = self.compute_accuracy(labels, preds)
+
+                data_load_time = data_load_end_time - data_load_start_time
+                step_time = time.time() - data_load_end_time
+                if ((self.step + 1) % log_frequency) == 0:
+                    self.log_metrics(epoch, accuracy, loss, data_load_time, step_time)
+                if ((self.step + 1) % print_frequency) == 0:
+                    self.print_metrics(epoch, accuracy, loss, data_load_time, step_time)
+
+                self.step += 1
+                data_load_start_time = time.time()
+
+            self.summary_writer.add_scalar("epoch", epoch, self.step)
+            if ((epoch + 1) % val_frequency) == 0:
+                self.validate()
+                # self.validate() will put the model in validation mode,
+                # so we have to switch back to train mode afterwards
+                self.lmc_model.train()
+                self.mc_model.train()
 
     def validate(self):
-        print("validating")
+        results = {"preds": [], "labels": []}
+        segment_results = {'logits': [], "labels": [], "fname": []}
+        total_loss = 0
+        self.lmc_model.eval()
+        self.mc_model.eval()
+
+        # No need to track gradients for validation, we're not optimizing.
+        with torch.no_grad():
+            for ((lmc_batch, mc_batch), labels, fnames) in self.val_loader:
+                lmc_batch = lmc_batch.to(self.device)
+                mc_batch = mc_batch.to(self.device)
+                labels = labels.to(self.device)
+
+                #compute the models predictions for each segment
+                lmc_logits = self.lmc_model.forward(lmc_batch)
+                mc_logits = self.mc_model.forward(mc_batch)
+
+                # Take mean of lmc and mc prediction of segment
+                logits = torch.mean(torch.stack((lmc_logits, mc_logits), dim=2), dim=2)
+
+                loss = self.criterion(logits, labels)
+                total_loss += loss.item()
+                # Collect all results to merge
+                segment_results['logits'].extend(list(logits))
+                segment_results['labels'].extend(list(labels))
+                segment_results['fname'].extend(fnames)
+
+            # For each unique file
+            for fname in set(segment_results['fname']):
+                # Get logits and labels from this file
+                indices = self.get_indices(segment_results['fname'], fname)
+                file_logits = torch.Tensor([list(segment_results['logits'][i]) for i in indices])
+                file_labels = [segment_results['labels'][i] for i in indices]
+                # All labels should be the same in a file
+                assert(all(file_labels[0] == label for label in file_labels))
+                label = file_labels[0]
+                # Average the logits from this file
+                prediction = self.compute_average_prediction(file_logits)
+                results['preds'].append(prediction)
+                results['labels'].append(label)
+
+        class_accuracy = self.compute_class_accuracy(
+            np.array(results["labels"]), np.array(results["preds"])
+        )
+
+        # accuracy = self.compute_accuracy(
+        #     np.array(results["labels"]), np.array(results["preds"])
+        # )
+        accuracy = np.sum(class_accuracy) / len(class_accuracy)
+
+        average_loss = total_loss / len(self.val_loader)
+
+        self.summary_writer.add_scalars(
+                "accuracy",
+                {"test": accuracy},
+                self.step
+        )
+        self.summary_writer.add_scalars(
+                "loss",
+                {"test": average_loss},
+                self.step
+        )
+        print(f"validation loss: {average_loss:.5f}, accuracy: {accuracy * 100:2.2f}")
+        for i, acc in enumerate(class_accuracy):
+            print(f"class {i} accuracy: {acc * 100:22.3f}")

@@ -1,6 +1,7 @@
 import time
 import torch
 import torch.backends.cudnn
+import numpy as np
 from torch import nn, optim
 from torch.nn import functional as F
 from torch.optim.optimizer import Optimizer
@@ -97,7 +98,7 @@ class Trainer(BaseTrainer):
             # For each unique file
             for fname in set(segment_results['fname']):
                 # Get logits and labels from this file
-                indices = get_indices(segment_results['fname'], fname)
+                indices = self.get_indices(segment_results['fname'], fname)
                 file_logits = torch.Tensor([list(segment_results['logits'][i]) for i in indices])
                 file_labels = [segment_results['labels'][i] for i in indices]
                 # All labels should be the same in a file

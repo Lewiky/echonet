@@ -15,7 +15,7 @@ class BaseTrainer:
         self.summary_writer = summary_writer
         self.step = 0
 
-    def get_indices(l, x):
+    def get_indices(self, l, x):
         '''Get all of the indices of l with value x'''
         return [i for i in range(len(l)) if l[i] == x]
 
