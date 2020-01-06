@@ -91,10 +91,9 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
     return str(tb_log_dir)
 
 def main(args):
-    # TODO: Make this not static yo 
-    mode = 'LMC'
+    print(f"Running in {args.mode} mode")
     train_loader = torch.utils.data.DataLoader(
-        UrbanSound8KDataset('data/UrbanSound8K_train.pkl', mode),
+        UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode),
         shuffle=True,
         batch_size=args.batch_size,
         pin_memory=True,
@@ -102,7 +101,7 @@ def main(args):
     )
 
     test_loader = torch.utils.data.DataLoader(
-        UrbanSound8KDataset('data/UrbanSound8K_test.pkl', mode),
+        UrbanSound8KDataset('data/UrbanSound8K_test.pkl', args.mode),
         shuffle=False,
         batch_size=args.batch_size,
         num_workers=args.worker_count,
