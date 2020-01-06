@@ -14,7 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import argparse
 from pathlib import Path
-from cnn import CNN
+from cnn import CNN, MLMC_CNN
 from trainer import Trainer
 from dataset import UrbanSound8KDataset
 
@@ -108,7 +108,11 @@ def main(args):
         pin_memory=True,
     )
 
-    model = CNN(height=85, width=41, channels=1, class_count=10)
+    if args.mode == "MLMC":
+        model = MLMC_CNN(height=85, width=41, channels=1, class_count=10)
+    else:
+        model = CNN(height=85, width=41, channels=1, class_count=10)
+
 
     # CrossEntropyLoss includes SoftMax, so no need to include in model
     criterion = nn.CrossEntropyLoss()

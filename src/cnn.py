@@ -115,3 +115,9 @@ class CNN(nn.Module):
                 nn.init.zeros_(layer.bias)
         if hasattr(layer, "weight"):
             nn.init.kaiming_normal_(layer.weight)
+
+class MLMC_CNN(CNN):
+   def __init__(self, height: int, width: int, channels: int, class_count: int, dropout: float = 0.5):
+       CNN.__init__(self, height, width, channels, class_count, dropout)
+       # Tweak size of FC1 layer
+       self.fc1 = nn.Linear(26048, 1024) 
