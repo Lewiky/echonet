@@ -14,7 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import argparse
 from pathlib import Path
-from cnn import CNN
+from cnn import CNN, MLMC_CNN
 from trainer import Trainer
 from dataset import UrbanSound8KDataset
 
@@ -91,10 +91,9 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
     return str(tb_log_dir)
 
 def main(args):
-    # TODO: Make this not static yo 
-    mode = 'LMC'
+    print(f"Running in {args.mode} mode")
     train_loader = torch.utils.data.DataLoader(
-        UrbanSound8KDataset('data/UrbanSound8K_train.pkl', mode),
+        UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode),
         shuffle=True,
         batch_size=args.batch_size,
         pin_memory=True,
@@ -102,14 +101,18 @@ def main(args):
     )
 
     test_loader = torch.utils.data.DataLoader(
-        UrbanSound8KDataset('data/UrbanSound8K_test.pkl', mode),
+        UrbanSound8KDataset('data/UrbanSound8K_test.pkl', args.mode),
         shuffle=False,
         batch_size=args.batch_size,
         num_workers=args.worker_count,
         pin_memory=True,
     )
 
-    model = CNN(height=85, width=41, channels=1, class_count=10)
+    if args.mode == "MLMC":
+        model = MLMC_CNN(height=85, width=41, channels=1, class_count=10)
+    else:
+        model = CNN(height=85, width=41, channels=1, class_count=10)
+
 
     # CrossEntropyLoss includes SoftMax, so no need to include in model
     criterion = nn.CrossEntropyLoss()
