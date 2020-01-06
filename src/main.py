@@ -15,9 +15,9 @@ from torch.utils.tensorboard import SummaryWriter
 import argparse
 from pathlib import Path
 from cnn import CNN, MLMC_CNN
+from fusion_trainer import FusionTrainer
 from trainer import Trainer
 from dataset import UrbanSound8KDataset
-
 
 torch.backends.cudnn.benchmark = True
 
@@ -67,7 +67,7 @@ parser.add_argument(
     help="Number of worker processes used to load data.",
 )
 parser.add_argument("--sgd-momentum", default=0.9, type=float)
-parser.add_argument("--mode", default='LMC', const='LMC', nargs='?', choices=["LMC", "MC", "MLMC"], type=str)
+parser.add_argument("--mode", default='LMC', const='LMC', nargs='?', choices=["LMC", "MC", "MLMC", "TSCNN"], type=str)
 
 def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
     """Get a unique directory that hasn't been logged to before for use with a TB
@@ -92,6 +92,20 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
 
 def main(args):
     print(f"Running in {args.mode} mode")
+
+    # Device and log dir config
+    DEVICE = torch.device("cpu")
+    if torch.cuda.is_available():
+        DEVICE = torch.device("cuda")
+
+    log_dir = get_summary_writer_log_dir(args)
+    print(f"Writing logs to {log_dir}")
+    summary_writer = SummaryWriter(
+            str(log_dir),
+            flush_secs=5
+    )
+
+    # Configure data loaders
     train_loader = torch.utils.data.DataLoader(
         UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode),
         shuffle=True,
@@ -108,32 +122,29 @@ def main(args):
         pin_memory=True,
     )
 
-    if args.mode == "MLMC":
-        model = MLMC_CNN(height=85, width=41, channels=1, class_count=10)
-    else:
-        model = CNN(height=85, width=41, channels=1, class_count=10)
 
-
-    # CrossEntropyLoss includes SoftMax, so no need to include in model
     criterion = nn.CrossEntropyLoss()
-
-    # optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.sgd_momentum, weight_decay=args.learning_rate)
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
-
-    log_dir = get_summary_writer_log_dir(args)
-    print(f"Writing logs to {log_dir}")
-    summary_writer = SummaryWriter(
-            str(log_dir),
-            flush_secs=5
-    )
-
-    DEVICE = torch.device("cpu")
-    if torch.cuda.is_available():
-        DEVICE = torch.device("cuda")
-
-    trainer = Trainer(
-        model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
-    )
+    if args.mode == "TSCNN":
+        # Run LMC and MC in parallel
+        lmc_model = CNN(height=85, width=41, channels=1, class_count=10)
+        mc_model = CNN(height=85, width=41, channels=1, class_count=10)
+        lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        trainer = FusionTrainer(
+            lmc_model, mc_model, train_loader, test_loader, criterion, lmc_optimizer, mc_optimizer, summary_writer, DEVICE
+        )
+    elif args.mode == "MLMC":
+        model = MLMC_CNN(height=85, width=41, channels=1, class_count=10)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        trainer = Trainer(
+            model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
+        )
+    elif args.mode == "MC" or args.mode == "LMC":
+        model = CNN(height=85, width=41, channels=1, class_count=10)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        trainer = Trainer(
+            model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
+        )
 
     trainer.train(
         args.epochs,

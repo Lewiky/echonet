@@ -25,6 +25,12 @@ class UrbanSound8KDataset(data.Dataset):
         elif self.mode == 'MLMC':
             feature = np.concatenate((mfcc, logmelspec, chroma, spec_contrast, tonnetz), axis=0)
             feature = torch.from_numpy(feature.astype(np.float32)).unsqueeze(0)
+        elif self.mode == "TSCNN":
+            feature_lmc = np.concatenate((logmelspec, chroma, spec_contrast, tonnetz), axis=0)
+            feature_lmc = torch.from_numpy(feature_lmc.astype(np.float32)).unsqueeze(0)
+            feature_mc = np.concatenate((mfcc, chroma, spec_contrast, tonnetz), axis=0)
+            feature_mc = torch.from_numpy(feature_mc.astype(np.float32)).unsqueeze(0)
+            feature = (feature_lmc, feature_mc)
        
         label = self.dataset[index]['classID']
         fname = self.dataset[index]['filename']
