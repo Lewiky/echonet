@@ -55,11 +55,11 @@ class FusionTrainer(BaseTrainer):
                 lmc_logits = self.lmc_model.forward(lmc_batch)
                 mc_logits = self.mc_model.forward(mc_batch)
 
-                # Take mean of lmc and mc prediction of segment
-                logits = torch.mean(torch.stack((lmc_logits, mc_logits), dim=2), dim=2)
+                lmc_loss = self.criterion(lmc_logits, labels)
+                lmc_loss.backward()
 
-                loss = self.criterion(logits, labels)
-                loss.backward()
+                mc_loss = self.criterion(mc_logits, labels)
+                mc_loss.backward()
 
                 self.lmc_optimizer.step()
                 self.lmc_optimizer.zero_grad()
@@ -68,15 +68,20 @@ class FusionTrainer(BaseTrainer):
                 self.mc_optimizer.zero_grad()
 
                 with torch.no_grad():
-                    preds = logits.argmax(-1)
-                    accuracy = self.compute_accuracy(labels, preds)
+                    lmc_preds = lmc_logits.argmax(-1)
+                    mc_preds = mc_logits.argmax(-1)
+                    
+                    lmc_accuracy = self.compute_accuracy(labels, lmc_preds)
+                    mc_accuracy = self.compute_accuracy(labels, mc_preds)
 
                 data_load_time = data_load_end_time - data_load_start_time
                 step_time = time.time() - data_load_end_time
                 if ((self.step + 1) % log_frequency) == 0:
-                    self.log_metrics(epoch, accuracy, loss, data_load_time, step_time)
+                    self.log_metrics(epoch, lmc_accuracy, lmc_loss, data_load_time, step_time, model="lmc")
+                    self.log_metrics(epoch, mc_accuracy, mc_loss, data_load_time, step_time, model="mc")
                 if ((self.step + 1) % print_frequency) == 0:
-                    self.print_metrics(epoch, accuracy, loss, data_load_time, step_time)
+                    self.print_metrics(epoch, lmc_accuracy, lmc_loss, data_load_time, step_time, model="lmc")
+                    self.print_metrics(epoch, mc_accuracy, mc_loss, data_load_time, step_time, model="mc")
 
                 self.step += 1
                 data_load_start_time = time.time()

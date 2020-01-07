@@ -43,8 +43,11 @@ class BaseTrainer:
             classes.append(float(count) / float(total))
         return classes 
 
-    def print_metrics(self, epoch, accuracy, loss, data_load_time, step_time):
+    def print_metrics(self, epoch, accuracy, loss, data_load_time, step_time, model=None):
         epoch_step = self.step % len(self.train_loader)
+        if model != None:
+            print(f"model: {model}, ", end="")
+
         print(
                 f"epoch: [{epoch}], "
                 f"step: [{epoch_step}/{len(self.train_loader)}], "
@@ -55,16 +58,18 @@ class BaseTrainer:
                 f"step time: {step_time:.5f}"
         )
 
-    def log_metrics(self, epoch, accuracy, loss, data_load_time, step_time):
+    def log_metrics(self, epoch, accuracy, loss, data_load_time, step_time, model=None):
         self.summary_writer.add_scalar("epoch", epoch, self.step)
+
+        train_key = "train" if model == None else "train_" + model
         self.summary_writer.add_scalars(
                 "accuracy",
-                {"train": accuracy},
+                {train_key: accuracy},
                 self.step
         )
         self.summary_writer.add_scalars(
                 "loss",
-                {"train": float(loss.item())},
+                {train_key: float(loss.item())},
                 self.step
         )
         self.summary_writer.add_scalar(
