@@ -29,6 +29,7 @@ default_dataset_dir = Path.home() / ".cache" / "torch" / "datasets"
 parser.add_argument("--dataset-root", default=default_dataset_dir)
 parser.add_argument("--log-dir", default=Path("logs"), type=Path)
 parser.add_argument("--learning-rate", default=0.001, type=float, help="Learning rate")
+parser.add_argument("--weight-decay", default=0.00001, type=float, help="weight decay")
 parser.add_argument(
     "--batch-size",
     default=32,
@@ -128,20 +129,20 @@ def main(args):
         # Run LMC and MC in parallel
         lmc_model = CNN(height=85, width=41, channels=1, class_count=10)
         mc_model = CNN(height=85, width=41, channels=1, class_count=10)
-        lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
-        mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+        mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
         trainer = FusionTrainer(
             lmc_model, mc_model, train_loader, test_loader, criterion, lmc_optimizer, mc_optimizer, summary_writer, DEVICE
         )
     elif args.mode == "MLMC":
         model = MLMC_CNN(height=85, width=41, channels=1, class_count=10)
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
         trainer = Trainer(
             model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
         )
     elif args.mode == "MC" or args.mode == "LMC":
         model = CNN(height=85, width=41, channels=1, class_count=10)
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
         trainer = Trainer(
             model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
         )
