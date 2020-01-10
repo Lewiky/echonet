@@ -94,15 +94,14 @@ def calculate_weights(dataset):
     classes = 10
     class_counts = [0] * classes
     # compute occurrences of each class
-    for i, (feature, label, filename) in enumerate(dataset):
+    for (feature, label, filename) in dataset:
         class_counts[label] += 1
 
     # work out weight per class, favouring those with less occurrences
-    total_samples = float(sum(class_counts))
-    per_class_weights = [total_samples / float(class_counts[i]) for i in range(classes)]
+    per_class_weights = [1 / float(class_counts[i]) for i in range(classes)]
     
     # attach weight to each sample
-    return [per_class_weights[label] for i, (feature, label, filename) in enumerate(dataset)]
+    return [per_class_weights[label] for (feature, label, filename) in dataset]
 
 
 def main(args):
@@ -121,16 +120,19 @@ def main(args):
     )
 
     train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode)
-    weighted_sampler = torch.utils.data.WeightedRandomSampler(calculate_weights(train_dataset), len(train_dataset))
+    weighted_sampler = torch.utils.data.BatchSampler(
+        torch.utils.data.WeightedRandomSampler(calculate_weights(train_dataset), len(train_dataset)),
+        args.batch_size,
+        False
+    )
 
     # Configure data loaders
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         shuffle=False,
-        batch_size=args.batch_size,
         pin_memory=True,
         num_workers=args.worker_count,
-        sampler=weighted_sampler,
+        batch_sampler=weighted_sampler,
     )
 
     test_loader = torch.utils.data.DataLoader(
