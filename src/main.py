@@ -146,20 +146,20 @@ def main(args):
         # Run LMC and MC in parallel
         lmc_model = CNN(height=85, width=41, channels=1, class_count=10)
         mc_model = CNN(height=85, width=41, channels=1, class_count=10)
-        lmc_optimizer = optim.AdamW(lmc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
-        mc_optimizer = optim.AdamW(mc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
         trainer = FusionTrainer(
             lmc_model, mc_model, train_loader, test_loader, criterion, lmc_optimizer, mc_optimizer, summary_writer, DEVICE
         )
     elif args.mode == "MLMC":
         model = MLMC_CNN(height=85, width=41, channels=1, class_count=10)
-        optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
         trainer = Trainer(
             model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
         )
     elif args.mode == "MC" or args.mode == "LMC":
         model = CNN(height=85, width=41, channels=1, class_count=10)
-        optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
         trainer = Trainer(
             model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
         )
