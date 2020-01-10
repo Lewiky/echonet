@@ -93,11 +93,16 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
 def calculate_weights(dataset):
     classes = 10
     class_counts = [0] * classes
+    # compute occurrences of each class
     for i, (feature, label, filename) in enumerate(dataset):
         class_counts[label] += 1
 
+    # work out weight per class, favouring those with less occurrences
     total_samples = float(sum(class_counts))
-    return [total_samples / float(class_counts[i]) for i in range(classes)]
+    per_class_weights = [total_samples / float(class_counts[i]) for i in range(classes)]
+    
+    # attach weight to each sample
+    return [per_class_weights[label] for i, (feature, label, filename) in enumerate(dataset)]
 
 
 def main(args):
