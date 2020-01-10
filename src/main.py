@@ -90,6 +90,16 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
         i += 1
     return str(tb_log_dir)
 
+def calculate_weights(dataset):
+    classes = 10
+    class_counts = [0] * classes
+    for i, (feature, label, filename) in enumerate(dataset):
+        class_counts[label] += 1
+
+    total_samples = float(sum(class_counts))
+    return [total_samples / float(class_counts[i]) for i in range(classes)]
+
+
 def main(args):
     print(f"Running in {args.mode} mode")
 
@@ -105,13 +115,17 @@ def main(args):
             flush_secs=5
     )
 
+    train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode)
+    weighted_sampler = torch.utils.data.WeightedRandomSampler(calculate_weights(train_dataset), len(train_dataset))
+
     # Configure data loaders
     train_loader = torch.utils.data.DataLoader(
-        UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode),
-        shuffle=True,
+        train_dataset,
+        shuffle=False,
         batch_size=args.batch_size,
         pin_memory=True,
         num_workers=args.worker_count,
+        sampler=weighted_sampler,
     )
 
     test_loader = torch.utils.data.DataLoader(
