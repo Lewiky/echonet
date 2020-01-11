@@ -38,7 +38,7 @@ class Trainer(BaseTrainer):
                 labels = labels.to(self.device)
                 logits = self.model(batch)
                 is_correct = (labels == logits.argmax(-1))
-                with open(self.qual_results_file,'a') as f:
+                with open(self.qual_results_file,'a+') as f:
                     f.write("".join([f"{x},{y}\n" for (x,y) in zip(indices, is_correct)]))
 
     def train(

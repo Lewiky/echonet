@@ -21,6 +21,7 @@ class FusionTrainer(BaseTrainer):
             mc_optimizer: Optimizer,
             summary_writer: SummaryWriter,
             device: torch.device,
+            qualitative_results_file: str = None
         ):
         BaseTrainer.__init__(self, train_loader, summary_writer)
         self.lmc_model = lmc_model.to(device)
@@ -30,7 +31,28 @@ class FusionTrainer(BaseTrainer):
         self.criterion = criterion
         self.lmc_optimizer = lmc_optimizer
         self.mc_optimizer = mc_optimizer
+        self.qual_results_file = qualitative_results_file
 
+    def gather_qualitative_results(self):
+        # Once we've finished, work out what is predicted correctly
+        print("Collecting results...")
+        with torch.no_grad():
+            for (lmc_batch, mc_batch), labels, fnames, indices in self.val_loader:
+                lmc_batch = lmc_batch.to(self.device)
+                mc_batch = mc_batch.to(self.device)
+                labels = labels.to(self.device)
+
+                #compute the models predictions for each segment
+                lmc_logits = self.lmc_model(lmc_batch)
+                mc_logits = self.mc_model(mc_batch)
+
+                # Take mean of lmc and mc prediction of segment
+                logits = torch.mean(torch.stack((lmc_logits, mc_logits), dim=2), dim=2)
+
+                is_correct = (labels == logits.argmax(-1))
+                with open(self.qual_results_file,'a+') as f:
+                    f.write("".join([f"{x},{y}\n" for (x,y) in zip(indices, is_correct)]))
+                    
     def train(
             self,
             epochs: int,
@@ -94,6 +116,12 @@ class FusionTrainer(BaseTrainer):
                 self.lmc_model.train()
                 self.mc_model.train()
 
+        # Once the model has been trained, gather qualitative results 
+        if self.qual_results_file is not None:
+            self.gather_qualitative_results()
+
+
+
     def validate(self):
         results = {"preds": [], "labels": []}
         segment_results = {'logits': [], "labels": [], "fname": []}
@@ -109,8 +137,8 @@ class FusionTrainer(BaseTrainer):
                 labels = labels.to(self.device)
 
                 #compute the models predictions for each segment
-                lmc_logits = self.lmc_model.forward(lmc_batch)
-                mc_logits = self.mc_model.forward(mc_batch)
+                lmc_logits = self.lmc_model(lmc_batch)
+                mc_logits = self.mc_model(mc_batch)
 
                 # Take mean of lmc and mc prediction of segment
                 logits = torch.mean(torch.stack((lmc_logits, mc_logits), dim=2), dim=2)
