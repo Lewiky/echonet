@@ -79,7 +79,7 @@ class BaseTrainer:
                 "time/data", step_time, self.step
         )
 
-    def compute_average_prediction(self, logits, mode='mean'):
+    def compute_average_prediction(self, logits, mode='mode'):
         '''
         logits: batch_size x 10 tensor 
         returns 1 x 10 tensor

@@ -141,7 +141,7 @@ def main(args):
         pin_memory=True,
     )
 
-    criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights))
+    criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
     if args.mode == "TSCNN":
         # Run LMC and MC in parallel
         lmc_model = CNN(height=85, width=41, channels=1, class_count=10)

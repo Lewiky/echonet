@@ -50,7 +50,7 @@ class CNN(nn.Module):
         )
         self.initialise_layer(self.conv2)
         self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(1, 1))
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), padding=(1, 1))
 
         params = sum(p.numel() for p in self.conv2.parameters() if p.requires_grad)
         print(f"Number of params layer 2: {params}")
