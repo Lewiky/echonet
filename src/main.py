@@ -28,6 +28,7 @@ parser = argparse.ArgumentParser(
 default_dataset_dir = Path.home() / ".cache" / "torch" / "datasets"
 parser.add_argument("--dataset-root", default=default_dataset_dir)
 parser.add_argument("--log-dir", default=Path("logs"), type=Path)
+parser.add_argument("--qual-results", help="File path to store qualitative results output")
 parser.add_argument("--learning-rate", default=0.001, type=float, help="Learning rate")
 parser.add_argument(
     "--batch-size",
@@ -131,19 +132,19 @@ def main(args):
         lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
         mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
         trainer = FusionTrainer(
-            lmc_model, mc_model, train_loader, test_loader, criterion, lmc_optimizer, mc_optimizer, summary_writer, DEVICE
+            lmc_model, mc_model, train_loader, test_loader, criterion, lmc_optimizer, mc_optimizer, summary_writer, DEVICE, args.qual_results
         )
     elif args.mode == "MLMC":
         model = MLMC_CNN(height=85, width=41, channels=1, class_count=10)
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
         trainer = Trainer(
-            model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
+            model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
         )
     elif args.mode == "MC" or args.mode == "LMC":
         model = CNN(height=85, width=41, channels=1, class_count=10)
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
         trainer = Trainer(
-            model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
+            model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
         )
 
     trainer.train(
