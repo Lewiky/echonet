@@ -101,7 +101,7 @@ def calculate_weights(dataset):
     per_class_weights = [1 / float(class_counts[i]) for i in range(classes)]
     
     # attach weight to each sample
-    return [per_class_weights[label] for (feature, label, filename) in dataset]
+    return per_class_weights, [per_class_weights[label] for (feature, label, filename) in dataset]
 
 
 def main(args):
@@ -120,7 +120,8 @@ def main(args):
     )
 
     train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode)
-    weighted_sampler = torch.utils.data.WeightedRandomSampler(calculate_weights(train_dataset), len(train_dataset))
+    class_weights, sample_weights = calculate_weights(train_dataset)
+    weighted_sampler = torch.utils.data.WeightedRandomSampler(sample_weights, len(train_dataset))
 
     # Configure data loaders
     train_loader = torch.utils.data.DataLoader(
@@ -140,8 +141,7 @@ def main(args):
         pin_memory=True,
     )
 
-
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights))
     if args.mode == "TSCNN":
         # Run LMC and MC in parallel
         lmc_model = CNN(height=85, width=41, channels=1, class_count=10)
