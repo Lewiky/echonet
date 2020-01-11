@@ -46,7 +46,7 @@ class FusionTrainer(BaseTrainer):
             self.lmc_model.train()
             self.mc_model.train()
             data_load_start_time = time.time()
-            for i, ((lmc_batch, mc_batch), labels, filename) in enumerate(self.train_loader):
+            for i, ((lmc_batch, mc_batch), labels, filenames, indices) in enumerate(self.train_loader):
                 lmc_batch = lmc_batch.to(self.device)
                 mc_batch = mc_batch.to(self.device)
                 labels = labels.to(self.device)
