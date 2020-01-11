@@ -142,7 +142,7 @@ def main(args):
         )
     elif args.mode == "MC" or args.mode == "LMC":
         model = CNN(height=85, width=41, channels=1, class_count=10)
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+        optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
         trainer = Trainer(
             model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE
         )
@@ -153,6 +153,8 @@ def main(args):
         print_frequency=args.print_frequency,
         log_frequency=args.log_frequency,
     )
+
+    trainer.validate()
 
     summary_writer.close()
 

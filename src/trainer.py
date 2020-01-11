@@ -19,6 +19,7 @@ class Trainer(BaseTrainer):
             optimizer: Optimizer,
             summary_writer: SummaryWriter,
             device: torch.device,
+            patience: int = 10
         ):
         BaseTrainer.__init__(self, train_loader, summary_writer)
         self.model = model.to(device)
@@ -26,6 +27,9 @@ class Trainer(BaseTrainer):
         self.val_loader = val_loader
         self.criterion = criterion
         self.optimizer = optimizer
+        self.counter = 0
+        self.best_loss = None
+        self.patience = patience
 
     def train(
             self,
@@ -36,6 +40,7 @@ class Trainer(BaseTrainer):
             start_epoch: int = 0
         ):
         self.model.train()
+        best_loss = None
         for epoch in range(start_epoch, epochs):
             self.model.train()
             data_load_start_time = time.time()
@@ -69,13 +74,16 @@ class Trainer(BaseTrainer):
 
             self.summary_writer.add_scalar("epoch", epoch, self.step)
             if ((epoch + 1) % val_frequency) == 0:
-                self.validate()
+                current_loss = self.validate()
+                if self.early_stop(current_loss):
+                    break
                 # self.validate() will put the model in validation mode,
                 # so we have to switch back to train mode afterwards
                 self.model.train()
+        self.model.load_state_dict(torch.load('best_model.pt'))
 
 
-    def validate(self):
+    def validate(self) -> float:
         results = {"preds": [], "labels": []}
         segment_results = {'logits': [], "labels": [], "fname": []}
         total_loss = 0
@@ -112,10 +120,6 @@ class Trainer(BaseTrainer):
         class_accuracy = self.compute_class_accuracy(
             np.array(results["labels"]), np.array(results["preds"])
         )
-
-        # accuracy = self.compute_accuracy(
-        #     np.array(results["labels"]), np.array(results["preds"])
-        # )
         accuracy = np.sum(class_accuracy) / len(class_accuracy)
 
         average_loss = total_loss / len(self.val_loader)
@@ -133,4 +137,24 @@ class Trainer(BaseTrainer):
         print(f"validation loss: {average_loss:.5f}, accuracy: {accuracy * 100:2.2f}")
         for i, acc in enumerate(class_accuracy):
             print(f"class {i} accuracy: {acc * 100:22.3f}")
+        return average_loss
 
+    def early_stop(self, loss: float) -> bool:
+        '''
+        Keep track of the loss and if it starts increasing, stop training the model
+        https://www.researchgate.net/profile/Lutz_Prechelt/publication/2874749_Early_Stopping_-_But_When/links/551bc1650cf2fe6cbf75e533.pdf
+        '''
+        if self.best_loss is None:
+            self.best_loss = loss
+            # Save the best seen model to use again later
+            torch.save(self.model.state_dict(), 'best_model.pt')
+        elif loss > self.best_loss:
+            self.counter += 1
+            if self.counter > self.patience:
+                print("Early stopping - loss increase detected")
+                return True
+        else:
+            self.best_loss = loss
+            self.counter -= 1
+            torch.save(self.model.state_dict(), 'best_model.pt')
+        return False
