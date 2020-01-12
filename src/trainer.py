@@ -19,6 +19,7 @@ class Trainer(BaseTrainer):
             optimizer: Optimizer,
             summary_writer: SummaryWriter,
             device: torch.device,
+            qualitative_results_file: str = None
         ):
         BaseTrainer.__init__(self, train_loader, summary_writer)
         self.model = model.to(device)
@@ -26,6 +27,19 @@ class Trainer(BaseTrainer):
         self.val_loader = val_loader
         self.criterion = criterion
         self.optimizer = optimizer
+        self.qual_results_file = qualitative_results_file
+
+    def gather_qualitative_results(self):
+        # Once we've finished, work out what is predicted correctly
+        print("Collecting results...")
+        with torch.no_grad():
+            for batch, labels, fnames, indices in self.val_loader:
+                batch = batch.to(self.device)
+                labels = labels.to(self.device)
+                logits = self.model(batch)
+                is_correct = (labels == logits.argmax(-1))
+                with open(self.qual_results_file,'a+') as f:
+                    f.write("".join([f"{x},{y}\n" for (x,y) in zip(indices, is_correct)]))
 
     def train(
             self,
@@ -39,7 +53,7 @@ class Trainer(BaseTrainer):
         for epoch in range(start_epoch, epochs):
             self.model.train()
             data_load_start_time = time.time()
-            for i, (batch, labels, filename) in enumerate(self.train_loader):
+            for i, (batch, labels, filenames, indices) in enumerate(self.train_loader):
                 batch = batch.to(self.device)
                 labels = labels.to(self.device)
                 data_load_end_time = time.time()
@@ -74,6 +88,9 @@ class Trainer(BaseTrainer):
                 # so we have to switch back to train mode afterwards
                 self.model.train()
 
+        # Once the model has been trained, gather qualitative results 
+        if self.qual_results_file is not None:
+            self.gather_qualitative_results()
 
     def validate(self):
         results = {"preds": [], "labels": []}
@@ -83,7 +100,7 @@ class Trainer(BaseTrainer):
 
         # No need to track gradients for validation, we're not optimizing.
         with torch.no_grad():
-            for batch, labels, fnames in self.val_loader:
+            for batch, labels, fnames, indices in self.val_loader:
                 batch = batch.to(self.device)
                 labels = labels.to(self.device)
                 #compute the models predictions for each segment

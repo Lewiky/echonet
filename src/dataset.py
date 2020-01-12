@@ -34,7 +34,7 @@ class UrbanSound8KDataset(data.Dataset):
        
         label = self.dataset[index]['classID']
         fname = self.dataset[index]['filename']
-        return feature, label, fname
+        return feature, label, fname, index
 
     def __len__(self):
         return len(self.dataset)
