@@ -120,17 +120,17 @@ def main(args):
     )
 
     train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode)
-    class_weights, sample_weights = calculate_weights(train_dataset)
-    weighted_sampler = torch.utils.data.WeightedRandomSampler(sample_weights, len(train_dataset))
+    # class_weights, sample_weights = calculate_weights(train_dataset)
+    # weighted_sampler = torch.utils.data.WeightedRandomSampler(sample_weights, len(train_dataset))
 
     # Configure data loaders
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        shuffle=False,
+        shuffle=True,
         pin_memory=True,
         num_workers=args.worker_count,
-        sampler=weighted_sampler,
+        # sampler=weighted_sampler,
     )
 
     test_loader = torch.utils.data.DataLoader(
@@ -141,7 +141,7 @@ def main(args):
         pin_memory=True,
     )
 
-    criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
+    criterion = nn.CrossEntropyLoss() # weight=torch.Tensor(class_weights).to(DEVICE))
     if args.mode == "TSCNN":
         # Run LMC and MC in parallel
         lmc_model = CNN(height=85, width=41, channels=1, class_count=10)
