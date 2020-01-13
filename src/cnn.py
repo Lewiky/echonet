@@ -50,7 +50,7 @@ class CNN(nn.Module):
         )
         self.initialise_layer(self.conv2)
         self.batch2 = nn.BatchNorm2d(self.conv2.out_channels)
-        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=(1, 1))
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2), padding=(1, 1))
 
         params = sum(p.numel() for p in self.conv2.parameters() if p.requires_grad)
         print(f"Number of params layer 2: {params}")
@@ -97,10 +97,10 @@ class CNN(nn.Module):
         print(f"Number of params: {params}")
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        x = self.batch1(F.relu(self.conv1(images)))
-        x = self.batch2(self.dropout(self.pool1(F.relu(self.conv2(x)))))
-        x = self.batch3(F.relu(self.conv3(x)))
-        x = self.batch4(self.dropout(F.relu(self.conv4(x))))
+        x = F.relu(self.batch1(self.conv1(images)))
+        x = self.dropout(self.pool1(F.relu(self.batch2(self.conv2(x)))))
+        x = F.relu(self.batch3(self.conv3(x)))
+        x = self.dropout(F.relu(self.batch4(self.conv4(x))))
         #x = self.pool2(x)
         x = torch.flatten(x, start_dim=1)
         x = self.dropout(torch.sigmoid(self.fc1(x)))

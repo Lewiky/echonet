@@ -131,7 +131,7 @@ class FusionTrainer(BaseTrainer):
 
         # No need to track gradients for validation, we're not optimizing.
         with torch.no_grad():
-            for ((lmc_batch, mc_batch), labels, fnames) in self.val_loader:
+            for ((lmc_batch, mc_batch), labels, fnames, indicies) in self.val_loader:
                 lmc_batch = lmc_batch.to(self.device)
                 mc_batch = mc_batch.to(self.device)
                 labels = labels.to(self.device)

@@ -91,6 +91,20 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
         i += 1
     return str(tb_log_dir)
 
+def calculate_weights(dataset):
+    classes = 10
+    class_counts = [0] * classes
+    # compute occurrences of each class
+    for (feature, label, filename, indices) in dataset:
+        class_counts[label] += 1
+
+    # work out weight per class, favouring those with less occurrences
+    per_class_weights = [1 / float(class_counts[i]) for i in range(classes)]
+    
+    # attach weight to each sample
+    return per_class_weights, [per_class_weights[label] for (feature, label, filename, indices) in dataset]
+
+
 def main(args):
     print(f"Running in {args.mode} mode")
 
@@ -106,13 +120,18 @@ def main(args):
             flush_secs=5
     )
 
+    train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode)
+    class_weights, sample_weights = calculate_weights(train_dataset)
+    weighted_sampler = torch.utils.data.WeightedRandomSampler(sample_weights, len(train_dataset))
+
     # Configure data loaders
     train_loader = torch.utils.data.DataLoader(
-        UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode),
-        shuffle=True,
+        train_dataset,
         batch_size=args.batch_size,
+        shuffle=False,
         pin_memory=True,
         num_workers=args.worker_count,
+        sampler=weighted_sampler,
     )
 
     test_loader = torch.utils.data.DataLoader(
@@ -123,8 +142,7 @@ def main(args):
         pin_memory=True,
     )
 
-
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
     if args.mode == "TSCNN":
         # Run LMC and MC in parallel
         lmc_model = CNN(height=85, width=41, channels=1, class_count=10)
