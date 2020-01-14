@@ -69,6 +69,9 @@ parser.add_argument(
 )
 parser.add_argument("--sgd-momentum", default=0.9, type=float)
 parser.add_argument("--mode", default='LMC', const='LMC', nargs='?', choices=["LMC", "MC", "MLMC", "TSCNN"], type=str)
+parser.add_argument('--dropout', default=0.5, const=0.5, nargs='?', type=float)
+parser.add_argument('--weight_decay', default=1e-4, const=1e-4, nargs='?', type=float)
+parser.add_argument('--augmentation_length', default=3, const=3, nargs='?', type=int)
 
 def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
     """Get a unique directory that hasn't been logged to before for use with a TB
@@ -82,7 +85,7 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
         from getting logged to the same TB log directory (which you can't easily
         untangle in TB).
     """
-    tb_log_dir_prefix = f'CNN_bn_bs={args.batch_size}_lr={args.learning_rate}_momentum={args.sgd_momentum}_run_'
+    tb_log_dir_prefix = f'CNN_bn_lr={args.learning_rate}_dropout={args.dropout}_mode={args.mode}_run_'
     i = 0
     while i < 1000:
         tb_log_dir = args.log_dir / (tb_log_dir_prefix + str(i))
@@ -107,6 +110,7 @@ def calculate_weights(dataset):
 
 def main(args):
     print(f"Running in {args.mode} mode")
+    print(f"Running with augmentation length {args.augmentation_length}")
 
     # Device and log dir config
     DEVICE = torch.device("cpu")
@@ -120,7 +124,7 @@ def main(args):
             flush_secs=5
     )
 
-    train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode)
+    train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode, augmentation_length = args.augmentation_length)
     class_weights, sample_weights = calculate_weights(train_dataset)
     weighted_sampler = torch.utils.data.WeightedRandomSampler(sample_weights, len(train_dataset))
 
@@ -145,22 +149,22 @@ def main(args):
     criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
     if args.mode == "TSCNN":
         # Run LMC and MC in parallel
-        lmc_model = CNN(height=85, width=41, channels=1, class_count=10)
-        mc_model = CNN(height=85, width=41, channels=1, class_count=10)
-        lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
-        mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        lmc_model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
+        mc_model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
+        lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+        mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
         trainer = FusionTrainer(
             lmc_model, mc_model, train_loader, test_loader, criterion, lmc_optimizer, mc_optimizer, summary_writer, DEVICE, args.qual_results
         )
     elif args.mode == "MLMC":
-        model = MLMC_CNN(height=85, width=41, channels=1, class_count=10)
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        model = MLMC_CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
         trainer = Trainer(
             model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
         )
     elif args.mode == "MC" or args.mode == "LMC":
-        model = CNN(height=85, width=41, channels=1, class_count=10)
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.0001)
+        model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
         trainer = Trainer(
             model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
         )
