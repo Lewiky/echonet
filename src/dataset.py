@@ -9,15 +9,22 @@ class UrbanSound8KDataset(data.Dataset):
     def __init__(self, dataset_path, mode, augmentation_length: int = 1):
         self.dataset = pickle.load(open(dataset_path, 'rb'))
         self.mode = mode
+        #augmentation length = number of times to go through dataset with augmentations
         self.augmentation_length = augmentation_length
 
     def _time_shift(self, tensor: torch.Tensor, amount: int) -> torch.Tensor:
+        '''
+        Given some `tensor`, take the first `amount` cols from the front of the spectogram 
+        and move them to the end, effectively 'shifting' the sound
+        '''
         return torch.cat([tensor[:,amount:], tensor[:,:amount]], dim=1)
 
     def __getitem__(self, index):
         cut_percentage = None
         offset = None
         dataset_length = len(self.dataset)
+
+        #If we're going around the dataset again, e.g into augmented data
         if index > dataset_length:
             cut_percentage = (index - dataset_length) / dataset_length
             offset = 1/(index // dataset_length)

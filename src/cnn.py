@@ -101,7 +101,6 @@ class CNN(nn.Module):
         x = self.dropout(self.pool1(F.relu(self.batch2(self.conv2(x)))))
         x = F.relu(self.batch3(self.conv3(x)))
         x = self.dropout(F.relu(self.batch4(self.conv4(x))))
-        #x = self.pool2(x)
         x = torch.flatten(x, start_dim=1)
         x = self.dropout(torch.sigmoid(self.fc1(x)))
         x = self.fc2(x)
@@ -119,5 +118,5 @@ class CNN(nn.Module):
 class MLMC_CNN(CNN):
    def __init__(self, height: int, width: int, channels: int, class_count: int, dropout: float = 0.5):
        CNN.__init__(self, height, width, channels, class_count, dropout)
-       # Tweak size of FC1 layer
+       # Tweak size of FC1 layer to account for the larger feature size of MLMC
        self.fc1 = nn.Linear(26048, 1024) 
