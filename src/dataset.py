@@ -13,9 +13,16 @@ class UrbanSound8KDataset(data.Dataset):
         self.augmentation_length = augmentation_length
 
     def _time_shift(self, tensor: torch.Tensor, amount: int) -> torch.Tensor:
-        '''
-        Given some `tensor`, take the first `amount` cols from the front of the spectogram 
+        '''Given some `tensor`, take the first `amount` cols from the front of the spectogram 
         and move them to the end, effectively 'shifting' the sound
+
+        Args:
+            tensor: a dataset spectogram
+            amount: number of columns to remove from the front of the tensor
+
+        Returns:
+            The same tensor, with `amount` columns shifted from the beginning to
+            the end of the spectogram
         '''
         return torch.cat([tensor[:,amount:], tensor[:,:amount]], dim=1)
 
@@ -24,18 +31,21 @@ class UrbanSound8KDataset(data.Dataset):
         offset = None
         dataset_length = len(self.dataset)
 
-        #If we're going around the dataset again, e.g into augmented data
+        # If we're going around the dataset again, e.g into augmented data,
+        # compute how much to shift by
         if index > dataset_length:
             cut_percentage = (index - dataset_length) / dataset_length
             offset = 1/(index // dataset_length)
             index = index % dataset_length
 
+        # Fetch each feature from the dataset dictionary
         logmelspec = self.dataset[index]['features']['logmelspec']
         mfcc = self.dataset[index]['features']['mfcc']
         chroma = self.dataset[index]['features']['chroma']
         spec_contrast = self.dataset[index]['features']['spectral_contrast']
         tonnetz = self.dataset[index]['features']['tonnetz']
 
+        # If shifting, augment the feature from the dataset using `time_shift`
         if cut_percentage is not None:
             shift_amount = math.floor(len(logmelspec[0]) * (offset + cut_percentage)) % dataset_length
             logmelspec = self._time_shift(logmelspec, shift_amount)
@@ -44,6 +54,7 @@ class UrbanSound8KDataset(data.Dataset):
             spec_contrast = self._time_shift(spec_contrast, shift_amount)
             tonnetz = self._time_shift(tonnetz, shift_amount)
 
+        # Build the feature for each model type, concatenating necessary features
         if self.mode == 'LMC':
             feature = np.concatenate((logmelspec, chroma, spec_contrast, tonnetz), axis=0)
             feature = torch.from_numpy(feature.astype(np.float32)).unsqueeze(0)
@@ -65,4 +76,6 @@ class UrbanSound8KDataset(data.Dataset):
         return feature, label, fname, index
 
     def __len__(self):
+        # Return the dataset multiple times if augmenting, with values after len(self.dataset)
+        # being augmented versions of the original.
         return self.augmentation_length * len(self.dataset)

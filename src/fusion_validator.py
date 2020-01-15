@@ -34,10 +34,10 @@ class FusionValidator():
         return [i for i in range(len(l)) if l[i] == x]
 
     def gather_qualitative_results(self):
-        # Once we've finished, work out what is predicted correctly
+        # Compute the qualitative results for late fusion 
         print("Collecting results...")
         with torch.no_grad():
-            for (lmc_batch, mc_batch), labels, fnames, indices in self.val_loader:
+            for (lmc_batch, mc_batch), labels, _, indices in self.val_loader:
                 lmc_batch = lmc_batch.to(self.device)
                 mc_batch = mc_batch.to(self.device)
                 labels = labels.to(self.device)
@@ -67,15 +67,17 @@ class FusionValidator():
                 mc_batch = mc_batch.to(self.device)
                 labels = labels.to(self.device)
 
-                #compute the models predictions for each segment
+                # Compute the models predictions for each segment
                 lmc_logits = self.lmc_model(lmc_batch)
                 mc_logits = self.mc_model(mc_batch)
 
                 # Take mean of lmc and mc prediction of segment
                 logits = torch.mean(torch.stack((lmc_logits, mc_logits), dim=2), dim=2)
 
+                # Compute loss for combined results
                 loss = self.criterion(logits, labels)
                 total_loss += loss.item()
+
                 # Collect all results to merge
                 segment_results['logits'].extend(list(logits))
                 segment_results['labels'].extend(list(labels))
@@ -95,20 +97,21 @@ class FusionValidator():
                 results['preds'].append(prediction)
                 results['labels'].append(label)
 
+        # Compute class accuracy at the file level
         class_accuracy = self.compute_class_accuracy(
             np.array(results["labels"]), np.array(results["preds"])
         )
 
-        # accuracy = self.compute_accuracy(
-        #     np.array(results["labels"]), np.array(results["preds"])
-        # )
         accuracy = np.sum(class_accuracy) / len(class_accuracy)
-
         average_loss = total_loss / len(self.val_loader)
 
         print(f"validation loss: {average_loss:.5f}, accuracy: {accuracy * 100:2.2f}")
         for i, acc in enumerate(class_accuracy):
             print(f"class {i} accuracy: {acc * 100:22.3f}")
+
+        if self.qual_results_file is not None:
+            self.gather_qualitative_results()
+            
 
     def compute_accuracy(self, labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]) -> float:
         """
@@ -120,6 +123,11 @@ class FusionValidator():
         return float((labels == preds).sum()) / len(labels)
 
     def compute_class_accuracy(self, labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]) -> [float]:
+        """Compute the class-wise accuracy of the labels and predicates
+        Args:
+            labels: ``(batch_size, class_count)`` tensor or array containing example labels
+            preds: ``(batch_size, class_count)`` tensor or array containing model predictions
+        """
         assert len(labels) == len(preds)
 
         classes = []
@@ -136,8 +144,10 @@ class FusionValidator():
 
     def compute_average_prediction(self, logits, mode='mode'):
         '''
-        logits: batch_size x 10 tensor 
-        returns 1 x 10 tensor
+        Args:
+            logits: batch_size x 10 tensor 
+        Returns: 
+            1 x 10 tensor of the average prediction for each class
         '''
         if mode == 'mode':
             argmaxs = logits.argmax(dim=-1)

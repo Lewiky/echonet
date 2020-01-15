@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --partition gpu_veryshort
+#SBATCH --partition gpu
 #SBATCH --time 1:00:00
 #SBATCH --mem 100GB
 #SBATCH --gres gpu:1
