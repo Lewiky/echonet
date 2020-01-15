@@ -70,7 +70,7 @@ class CNN(nn.Module):
         params = sum(p.numel() for p in self.conv3.parameters() if p.requires_grad)
         print(f"Number of params layer 3: {params}")
 
-        # 4th conv. layer
+        # 4th Conv. layer
         self.conv4 = nn.Conv2d(
             in_channels=self.conv3.out_channels,
             out_channels=64,
@@ -84,19 +84,21 @@ class CNN(nn.Module):
 
         params = sum(p.numel() for p in self.conv4.parameters() if p.requires_grad)
         print(f"Number of params layer 4: {params}")
-        #self.pool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2,2), padding=(1,1))
 
+        # 1st Fully Connected Layer
         self.fc1 = nn.Linear(15488, 1024)
         self.initialise_layer(self.fc1)
         params = sum(p.numel() for p in self.fc1.parameters() if p.requires_grad)
         print(f"Number of params layer 5: {params}")
 
+        # 2nd Fully Connected Layer
         self.fc2 = nn.Linear(1024, 10)
         self.initialise_layer(self.fc2)
         params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print(f"Number of params: {params}")
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
+        # Apply each layer in order, according to the paper by Su et al.
         x = F.relu(self.batch1(self.conv1(images)))
         x = self.dropout(self.pool1(F.relu(self.batch2(self.conv2(x)))))
         x = F.relu(self.batch3(self.conv3(x)))

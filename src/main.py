@@ -22,11 +22,10 @@ from dataset import UrbanSound8KDataset
 torch.backends.cudnn.benchmark = True
 
 parser = argparse.ArgumentParser(
-    description="Train a simple CNN on CIFAR-10",
+    description="Train a network for performing intelligent sound recognition using the UrbanSound8K dataset",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
 )
-default_dataset_dir = Path.home() / ".cache" / "torch" / "datasets"
-parser.add_argument("--dataset-root", default=default_dataset_dir)
+parser.add_argument("--dataset-root", default=Path("data"))
 parser.add_argument("--log-dir", default=Path("logs"), type=Path)
 parser.add_argument("--qual-results", help="File path to store qualitative results output")
 parser.add_argument("--learning-rate", default=0.001, type=float, help="Learning rate")
@@ -67,11 +66,10 @@ parser.add_argument(
     type=int,
     help="Number of worker processes used to load data.",
 )
-parser.add_argument("--sgd-momentum", default=0.9, type=float)
 parser.add_argument("--mode", default='LMC', const='LMC', nargs='?', choices=["LMC", "MC", "MLMC", "TSCNN"], type=str)
-parser.add_argument('--dropout', default=0.5, const=0.5, nargs='?', type=float)
-parser.add_argument('--weight_decay', default=1e-4, const=1e-4, nargs='?', type=float)
-parser.add_argument('--augmentation_length', default=3, const=3, nargs='?', type=int)
+parser.add_argument('--dropout', default=0.5, const=0.5, nargs='?', type=float, help="Dropout probability propagated to all networks")
+parser.add_argument('--weight-decay', default=1e-4, const=1e-4, nargs='?', type=float, help="Weight decay to apply to Adam optimiser")
+parser.add_argument('--augmentation-length', default=1, const=1, nargs='?', type=int, help="Total iterations through dataset - >1 will include augmentation")
 
 def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
     """Get a unique directory that hasn't been logged to before for use with a TB
@@ -95,17 +93,28 @@ def get_summary_writer_log_dir(args: argparse.Namespace) -> str:
     return str(tb_log_dir)
 
 def calculate_weights(dataset):
+    """Compute inverted weighting of each class in the dataset.
+    This ensures classes with more occurences have less weighting
+
+    Args:
+        dataset: the dataset the compute the weight from
+
+    Returns:
+        A tuple of inverted class weightings for each class in the dataset, as well
+        as a list of the weights for each sample in the dataset, according to the class
+        label associated with it.
+    """
     classes = 10
     class_counts = [0] * classes
     # compute occurrences of each class
-    for (feature, label, filename, indices) in dataset:
+    for (_, label, _, _) in dataset:
         class_counts[label] += 1
 
     # work out weight per class, favouring those with less occurrences
     per_class_weights = [1 / float(class_counts[i]) for i in range(classes)]
     
     # attach weight to each sample
-    return per_class_weights, [per_class_weights[label] for (feature, label, filename, indices) in dataset]
+    return per_class_weights, [per_class_weights[label] for (_, label, _, _) in dataset]
 
 
 def main(args):
@@ -125,7 +134,7 @@ def main(args):
     )
 
     if args.mode == "TSCNN":
-        # Run LMC and MC in parallel
+        # Train LMC model independently
         args.mode = "LMC"
         lmc_train_loader, lmc_test_loader, class_weights = build_dataloader(args)
         criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
@@ -141,6 +150,7 @@ def main(args):
             log_frequency=args.log_frequency,
         )
 
+        # Train MC model independently
         args.mode = "MC"
         mc_train_loader, mc_test_loader, _ = build_dataloader(args)
         mc_model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
@@ -155,7 +165,7 @@ def main(args):
             log_frequency=args.log_frequency,
         )
 
-        # Perform fusion and validate
+        # Perform fusion and validate both networks using "late fusion"
         print("Validating")
         args.mode = "TSCNN"
         _, fusion_test_loader, _ = build_dataloader(args)
@@ -169,21 +179,28 @@ def main(args):
         f_validator.validate()
 
     else:
+        # Train the network according to the CLI Mode arg
         train_loader, test_loader, class_weights = build_dataloader(args)
+
+        # Define the loss function
         criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
+
         if args.mode == "MLMC":
+            # Define the MLMC model and trainer
             model = MLMC_CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
             optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
             trainer = Trainer(
                 model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
             )
         elif args.mode == "MC" or args.mode == "LMC":
+            # Define the model and trainer for MC or LMC
             model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
             optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
             trainer = Trainer(
                 model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
             )
 
+        # Train the MLMC, MC or LMC model
         trainer.train(
             args.epochs,
             args.val_frequency,
@@ -194,11 +211,23 @@ def main(args):
     summary_writer.close()
 
 def build_dataloader(args):
-    train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode, augmentation_length = args.augmentation_length)
+    """ Build a training and test dataloader for the UrbanSound8K dataset
+
+    Args:
+        args: the CLI args
+
+    Returns:
+        A tuple of training loader, testing loader and individual inverted class weights
+    """
+
+    # Load data set and compute class weightings
+    train_dataset = UrbanSound8KDataset(args.dataset_root / 'UrbanSound8K_train.pkl', args.mode, augmentation_length = args.augmentation_length)
     class_weights, sample_weights = calculate_weights(train_dataset)
+
+    # Define a weighted sampler for the dataset
     weighted_sampler = torch.utils.data.WeightedRandomSampler(sample_weights, len(train_dataset))
 
-    # Configure data loaders
+    # Configure data loaders for testing and training
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -209,7 +238,7 @@ def build_dataloader(args):
     )
 
     test_loader = torch.utils.data.DataLoader(
-        UrbanSound8KDataset('data/UrbanSound8K_test.pkl', args.mode),
+        UrbanSound8KDataset(args.dataset_root / 'UrbanSound8K_test.pkl', args.mode),
         shuffle=False,
         batch_size=args.batch_size,
         num_workers=args.worker_count,

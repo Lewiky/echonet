@@ -29,6 +29,11 @@ class BaseTrainer:
         return float((labels == preds).sum()) / len(labels)
 
     def compute_class_accuracy(self, labels: Union[torch.Tensor, np.ndarray], preds: Union[torch.Tensor, np.ndarray]) -> [float]:
+        """Compute the class-wise accuracy of the labels and predicates
+        Args:
+            labels: ``(batch_size, class_count)`` tensor or array containing example labels
+            preds: ``(batch_size, class_count)`` tensor or array containing model predictions
+        """
         assert len(labels) == len(preds)
 
         classes = []
@@ -81,8 +86,10 @@ class BaseTrainer:
 
     def compute_average_prediction(self, logits, mode='mode'):
         '''
-        logits: batch_size x 10 tensor 
-        returns 1 x 10 tensor
+        Args:
+            logits: batch_size x 10 tensor 
+        Returns: 
+            1 x 10 tensor of the average prediction for each class
         '''
         if mode == 'mode':
             argmaxs = logits.argmax(dim=-1)
