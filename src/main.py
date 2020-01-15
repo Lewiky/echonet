@@ -15,7 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 import argparse
 from pathlib import Path
 from cnn import CNN, MLMC_CNN
-from fusion_trainer import FusionTrainer
+from fusion_validator import FusionValidator
 from trainer import Trainer
 from dataset import UrbanSound8KDataset
 
@@ -124,6 +124,76 @@ def main(args):
             flush_secs=5
     )
 
+    if args.mode == "TSCNN":
+        # Run LMC and MC in parallel
+        args.mode = "LMC"
+        lmc_train_loader, lmc_test_loader, class_weights = build_dataloader(args)
+        criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
+        lmc_model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
+        lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+        lmc_trainer = Trainer(
+            lmc_model, lmc_train_loader, lmc_test_loader, criterion, lmc_optimizer, summary_writer, DEVICE, args.qual_results
+        )
+        lmc_trainer.train(
+            args.epochs,
+            args.val_frequency,
+            print_frequency=args.print_frequency,
+            log_frequency=args.log_frequency,
+        )
+
+        args.mode = "MC"
+        mc_train_loader, mc_test_loader, _ = build_dataloader(args)
+        mc_model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
+        mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+        mc_trainer = Trainer(
+            mc_model, mc_train_loader, mc_test_loader, criterion, mc_optimizer, summary_writer, DEVICE, args.qual_results
+        )
+        mc_trainer.train(
+            args.epochs,
+            args.val_frequency,
+            print_frequency=args.print_frequency,
+            log_frequency=args.log_frequency,
+        )
+
+        # Perform fusion and validate
+        print("Validating")
+        args.mode = "TSCNN"
+        _, fusion_test_loader, _ = build_dataloader(args)
+        f_validator = FusionValidator(lmc_model, 
+            mc_model, 
+            fusion_test_loader,
+            criterion,
+            summary_writer,
+            DEVICE,
+            args.qual_results)
+        f_validator.validate()
+
+    else:
+        train_loader, test_loader, class_weights = build_dataloader(args)
+        criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
+        if args.mode == "MLMC":
+            model = MLMC_CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
+            optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+            trainer = Trainer(
+                model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
+            )
+        elif args.mode == "MC" or args.mode == "LMC":
+            model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
+            optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+            trainer = Trainer(
+                model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
+            )
+
+        trainer.train(
+            args.epochs,
+            args.val_frequency,
+            print_frequency=args.print_frequency,
+            log_frequency=args.log_frequency,
+        )
+
+    summary_writer.close()
+
+def build_dataloader(args):
     train_dataset = UrbanSound8KDataset('data/UrbanSound8K_train.pkl', args.mode, augmentation_length = args.augmentation_length)
     class_weights, sample_weights = calculate_weights(train_dataset)
     weighted_sampler = torch.utils.data.WeightedRandomSampler(sample_weights, len(train_dataset))
@@ -145,38 +215,8 @@ def main(args):
         num_workers=args.worker_count,
         pin_memory=True,
     )
-
-    criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights).to(DEVICE))
-    if args.mode == "TSCNN":
-        # Run LMC and MC in parallel
-        lmc_model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
-        mc_model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
-        lmc_optimizer = optim.Adam(lmc_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-        mc_optimizer = optim.Adam(mc_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-        trainer = FusionTrainer(
-            lmc_model, mc_model, train_loader, test_loader, criterion, lmc_optimizer, mc_optimizer, summary_writer, DEVICE, args.qual_results
-        )
-    elif args.mode == "MLMC":
-        model = MLMC_CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-        trainer = Trainer(
-            model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
-        )
-    elif args.mode == "MC" or args.mode == "LMC":
-        model = CNN(height=85, width=41, channels=1, class_count=10, dropout=args.dropout)
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-        trainer = Trainer(
-            model, train_loader, test_loader, criterion, optimizer, summary_writer, DEVICE, args.qual_results
-        )
-
-    trainer.train(
-        args.epochs,
-        args.val_frequency,
-        print_frequency=args.print_frequency,
-        log_frequency=args.log_frequency,
-    )
-
-    summary_writer.close()
+    
+    return train_loader, test_loader, class_weights
 
 if __name__ == "__main__":
     main(parser.parse_args())
